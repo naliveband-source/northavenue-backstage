@@ -1,6 +1,12 @@
 "use client";
+import { useState, useMemo, useRef, useEffect } from "react";
 
-import { useState, useMemo, useRef } from "react";
+// ── Responsive hook ────────────────────────────────────────────────────────
+function useWindowWidth(){
+  const [w,setW]=useState(typeof window!=="undefined"?window.innerWidth:1200);
+  useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
+  return w;
+}
 
 const DARK  = { black:"#181719",white:"#F8F5E6",orange:"#D4622A",green:"#1E7B5B",dim:"#2A2628",muted:"#B0A8A4",border:"#2E2B2C",red:"#C04040",cardText:"#E8E0DC",subText:"#C0B8B4" };
 const LIGHT = { black:"#F2EFE4",white:"#1A1718",orange:"#C4521F",green:"#1E7B5B",dim:"#E8E4D8",muted:"#7A7470",border:"#D0CCC0",red:"#9B2020",cardText:"#1A1718",subText:"#4A4440" };
@@ -993,7 +999,6 @@ function LoginScreen({onLogin,users}){
         <Field label="ADGANGSKODE" T={T}><PwInput value={pass} onChange={e=>setPass(e.target.value)} T={T}/></Field>
         {err&&<div style={{color:T.orange,fontSize:11,marginBottom:10,fontFamily:"'Poppins',sans-serif"}}>{err}</div>}
         <Btn onClick={handle} color={T.orange} style={{width:"100%",padding:"13px",fontSize:13,letterSpacing:"0.08em",marginTop:4}}>LOG IND →</Btn>
-        <div style={{marginTop:16,fontSize:10,color:T.muted,opacity:0.35,textAlign:"center",fontFamily:"'Poppins',sans-serif"}}>admin@na.dk / admin123</div>
       </div>
     </div>
   </div>);
@@ -1040,41 +1045,69 @@ export default function App(){
     profile: {title:"MIN PROFIL",     sub:"Rediger dine oplysninger"},
   };
 
+  const winW=useWindowWidth();
+  const isMobile=winW<768;
+  const isTablet=winW<1100;
+  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
+
   return(<div style={{minHeight:"100vh",background:T.black,color:T.white,display:"flex",fontFamily:"'Poppins',sans-serif"}}>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
-    <div style={{width:240,background:T.dim,borderRight:`1px solid ${T.border}`,display:"flex",flexDirection:"column",flexShrink:0,position:"fixed",top:0,left:0,bottom:0,zIndex:10}}>
-      <div style={{padding:"28px 22px 22px",borderBottom:`1px solid ${T.border}`}}>
-        <div style={{marginBottom:14}}><NAStar size={32} color={T.orange}/></div>
-        <div style={{fontWeight:800,fontSize:42,letterSpacing:"-0.01em",color:T.white,lineHeight:0.9}}>NORTH<br/><span style={{color:T.orange}}>AVENUE</span></div>
-        <div style={{fontSize:9,color:T.muted,letterSpacing:"0.15em",marginTop:12}}>BACKSTAGE</div>
-      </div>
-      <nav style={{padding:"18px 0",flex:1,overflowY:"auto"}}>
-        {nav.map(n=>(<button key={n.id} onClick={()=>setView(n.id)}
-          style={{display:"block",width:"100%",textAlign:"left",padding:"11px 22px",background:"transparent",border:"none",borderLeft:effectiveView===n.id?`2px solid ${T.orange}`:"2px solid transparent",color:effectiveView===n.id?T.white:T.muted,cursor:"pointer",fontSize:11,letterSpacing:"0.1em",fontWeight:effectiveView===n.id?700:400,transition:"all .15s"}}>
+
+    {/* Mobile top bar */}
+    {isMobile&&(<div style={{position:"fixed",top:0,left:0,right:0,height:56,background:T.dim,borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",zIndex:20}}>
+      <div style={{fontWeight:800,fontSize:20,letterSpacing:"-0.01em",color:T.white,lineHeight:1}}>NORTH<span style={{color:T.orange}}>AVENUE</span></div>
+      <button onClick={()=>setMobileMenuOpen(o=>!o)} style={{background:"none",border:`1px solid ${T.border}`,color:T.white,cursor:"pointer",padding:"6px 10px",fontSize:16,borderRadius:2}}>
+        {mobileMenuOpen?"✕":"☰"}
+      </button>
+    </div>)}
+
+    {/* Mobile menu overlay */}
+    {isMobile&&mobileMenuOpen&&(<div style={{position:"fixed",inset:0,zIndex:19,background:T.dim,paddingTop:56,display:"flex",flexDirection:"column"}}>
+      <nav style={{padding:"16px 0",flex:1}}>
+        {nav.map(n=>(<button key={n.id} onClick={()=>{setView(n.id);setMobileMenuOpen(false);}}
+          style={{display:"block",width:"100%",textAlign:"left",padding:"14px 24px",background:"transparent",border:"none",borderLeft:effectiveView===n.id?`3px solid ${T.orange}`:"3px solid transparent",color:effectiveView===n.id?T.white:T.muted,cursor:"pointer",fontSize:14,letterSpacing:"0.1em",fontWeight:effectiveView===n.id?700:400}}>
           {n.label}
         </button>))}
       </nav>
       <div style={{padding:16,borderTop:`1px solid ${T.border}`}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-          {curU.avatar?<img src={curU.avatar} alt="" style={{width:34,height:34,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
-            :<div style={{width:34,height:34,background:(SPOT[curU.id]||T.orange)+"22",border:`1px solid ${SPOT[curU.id]||T.orange}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:SPOT[curU.id]||T.orange,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{curU.initials||"?"}</div>}
-          <div><div style={{fontSize:13,fontWeight:700,color:T.white}}>{curU.first}</div>
+        <div style={{fontSize:13,fontWeight:700,color:T.white,marginBottom:8}}>{curU.first} · {isAdmin?"ADMIN":isSub?"VIKAR":"MUSIKER"}</div>
+        <button onClick={()=>{setUser(null);setView("bookings");setMobileMenuOpen(false);}} style={{width:"100%",padding:"10px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontSize:11,letterSpacing:"0.06em"}}>LOG UD</button>
+      </div>
+    </div>)}
+
+    {/* Desktop sidebar */}
+    {!isMobile&&(<div style={{width:isTablet?180:240,background:T.dim,borderRight:`1px solid ${T.border}`,display:"flex",flexDirection:"column",flexShrink:0,position:"fixed",top:0,left:0,bottom:0,zIndex:10}}>
+      <div style={{padding:isTablet?"20px 16px":"28px 22px 22px",borderBottom:`1px solid ${T.border}`}}>
+        <div style={{marginBottom:10}}><NAStar size={isTablet?24:32} color={T.orange}/></div>
+        <div style={{fontWeight:800,fontSize:isTablet?28:42,letterSpacing:"-0.01em",color:T.white,lineHeight:0.9}}>NORTH<br/><span style={{color:T.orange}}>AVENUE</span></div>
+        <div style={{fontSize:9,color:T.muted,letterSpacing:"0.15em",marginTop:10}}>BACKSTAGE</div>
+      </div>
+      <nav style={{padding:"14px 0",flex:1,overflowY:"auto"}}>
+        {nav.map(n=>(<button key={n.id} onClick={()=>setView(n.id)}
+          style={{display:"block",width:"100%",textAlign:"left",padding:isTablet?"9px 16px":"11px 22px",background:"transparent",border:"none",borderLeft:effectiveView===n.id?`2px solid ${T.orange}`:"2px solid transparent",color:effectiveView===n.id?T.white:T.muted,cursor:"pointer",fontSize:isTablet?10:11,letterSpacing:"0.1em",fontWeight:effectiveView===n.id?700:400,transition:"all .15s"}}>
+          {n.label}
+        </button>))}
+      </nav>
+      <div style={{padding:isTablet?12:16,borderTop:`1px solid ${T.border}`}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          {curU.avatar?<img src={curU.avatar} alt="" style={{width:30,height:30,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
+            :<div style={{width:30,height:30,background:(SPOT[curU.id]||T.orange)+"22",border:`1px solid ${SPOT[curU.id]||T.orange}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:SPOT[curU.id]||T.orange,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{curU.initials||"?"}</div>}
+          <div><div style={{fontSize:isTablet?11:13,fontWeight:700,color:T.white}}>{curU.first}</div>
             <div style={{fontSize:9,color:T.muted}}>{isAdmin?"ADMIN":isSub?"VIKAR":isAliasOnly?"ALIAS":"MUSIKER"}</div>
           </div>
         </div>
-        <div style={{display:"flex",gap:6}}>
-          <button onClick={()=>{setUser(null);setView("bookings");}} style={{flex:1,padding:"7px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",transition:"all .15s"}}
-            onMouseEnter={e=>{e.target.style.borderColor=T.orange;e.target.style.color=T.orange;}} onMouseLeave={e=>{e.target.style.borderColor=T.border;e.target.style.color=T.muted;}}>LOG UD</button>
-        </div>
+        <button onClick={()=>{setUser(null);setView("bookings");}} style={{width:"100%",padding:"7px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",transition:"all .15s"}}
+          onMouseEnter={e=>{e.target.style.borderColor=T.orange;e.target.style.color=T.orange;}} onMouseLeave={e=>{e.target.style.borderColor=T.border;e.target.style.color=T.muted;}}>LOG UD</button>
       </div>
-    </div>
+    </div>)}
 
-    <div style={{marginLeft:240,flex:1,padding:40}}>
+    {/* Main content */}
+    <div style={{marginLeft:isMobile?0:isTablet?180:240,flex:1,padding:isMobile?"72px 16px 24px":isTablet?"24px":40,minWidth:0}}>
       <div style={{position:"fixed",top:0,right:0,width:"40%",height:"40%",background:`radial-gradient(ellipse at top right,${T.orange}07 0%,transparent 70%)`,pointerEvents:"none",zIndex:0}}/>
       <div style={{position:"relative",zIndex:1}}>
-        <div style={{marginBottom:28,paddingBottom:20,borderBottom:`1px solid ${T.border}`}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><NAStar size={12} color={T.orange} opacity={0.6}/><span style={{fontSize:10,color:T.muted,letterSpacing:"0.14em"}}>{meta[effectiveView]?.sub}</span></div>
-          <h1 style={{fontSize:28,fontWeight:800,color:T.white,margin:0,letterSpacing:"0.04em"}}>{meta[effectiveView]?.title}</h1>
+        <div style={{marginBottom:isMobile?16:28,paddingBottom:isMobile?12:20,borderBottom:`1px solid ${T.border}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><NAStar size={10} color={T.orange} opacity={0.6}/><span style={{fontSize:9,color:T.muted,letterSpacing:"0.14em"}}>{meta[effectiveView]?.sub}</span></div>
+          <h1 style={{fontSize:isMobile?18:isTablet?22:28,fontWeight:800,color:T.white,margin:0,letterSpacing:"0.04em"}}>{meta[effectiveView]?.title}</h1>
         </div>
         {effectiveView==="bookings"&&<BookingsView currentUser={curU} bookings={bookings} setBookings={setBookings} users={users} T={T} darkMode={darkMode}/>}
         {effectiveView==="alias"   &&<AliasView currentUser={curU} aliasData={aliasData} setAliasData={setAliasData} users={users} T={T} darkMode={darkMode}/>}
