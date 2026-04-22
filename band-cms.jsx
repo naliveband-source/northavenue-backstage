@@ -460,11 +460,17 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
               <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{b.city} · {b.playTime||"–"}</div>
             </div>
             <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{fontSize:14,fontWeight:800,color:br.color,fontFamily:"'Poppins',sans-serif"}}>{fmt(pay)}</div>
+              <div style={{fontSize:14,fontWeight:800,color:br.color,fontFamily:"'Poppins',sans-serif"}}>{isAdmin?fmt(b.bandPay):fmt(pay)}</div>
               {!isAdmin&&!isSub&&!past&&(
                 <button onClick={e=>{e.stopPropagation();toggleMember(b.id,currentUser.musicianId);}}
                   style={{marginTop:4,padding:"3px 8px",border:`1px solid ${iAmIn?T.green:T.red}`,background:iAmIn?T.green+"22":T.red+"18",color:iAmIn?T.green:T.red,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>
                   {iAmIn?"MED ✓":"FRAVÆRENDE"}
+                </button>
+              )}
+              {isAdmin&&(
+                <button onClick={e=>{e.stopPropagation();setEditingBooking(b);}}
+                  style={{marginTop:4,padding:"3px 8px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.06em"}}>
+                  REDIGER
                 </button>
               )}
             </div>
@@ -579,6 +585,8 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
 
   const oA=darkMode?"#D4622A":"#C4521F";
   const hd={padding:"9px 12px",textAlign:"left",color:T.muted,fontSize:11,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",whiteSpace:"nowrap",fontWeight:600};
+  const winW=useWindowWidth();
+  const isMobile=winW<768;
   if(!selManager)return <div style={{color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:14,padding:20}}>Ingen alias-visning tilgængelig.</div>;
 
   return(<div>
@@ -593,15 +601,47 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
       </div>
     )}
     <YearTabs value={yr} onChange={setYr} T={T} years={YEAR_OPTS}/>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:1,marginBottom:20,background:T.border}}>
+    <div style={{display:"grid",gridTemplateColumns:`repeat(${isMobile?1:3},1fr)`,gap:1,marginBottom:20,background:T.border}}>
       {[{l:"ANTAL JOBS",v:managerBookings.length},{l:"TOTAL BELØB",v:fmt(totalPay)},{l:"TOTAL BOOKING",v:fmt(totalBook)}].map(s=>(
-        <div key={s.l} style={{background:T.dim,padding:"16px 20px"}}>
-          <div style={{fontSize:11,color:T.muted,letterSpacing:"0.1em",marginBottom:8,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{s.l}</div>
-          <div style={{fontSize:26,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em"}}>{s.v}</div>
+        <div key={s.l} style={{background:T.dim,padding:isMobile?"12px 14px":"16px 20px"}}>
+          <div style={{fontSize:isMobile?9:11,color:T.muted,letterSpacing:"0.1em",marginBottom:4,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{s.l}</div>
+          <div style={{fontSize:isMobile?18:26,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em"}}>{s.v}</div>
         </div>
       ))}
     </div>
-    <div style={{overflowX:"auto",background:T.border}}>
+
+    {/* Mobile card view */}
+    {isMobile&&(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {managerBookings.map(b=>{
+        const past=isPast(b.date);
+        const weekday=new Date(b.date).toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
+        const dateStr=new Date(b.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"});
+        return(
+          <div key={b.id} onClick={()=>setDetailBooking(b)}
+            style={{background:T.dim,borderLeft:`3px solid ${past?oA:T.orange}`,padding:"14px 16px",cursor:"pointer",opacity:past?0.65:1,display:"flex",alignItems:"center",gap:14,position:"relative"}}>
+            <div style={{textAlign:"center",flexShrink:0,minWidth:42}}>
+              <div style={{fontSize:9,color:past?oA:T.muted,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>{weekday}</div>
+              <div style={{fontSize:18,fontWeight:800,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",lineHeight:1.1}}>{dateStr.split(" ")[0]}</div>
+              <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{dateStr.split(" ")[1]}</div>
+            </div>
+            <div style={{width:1,height:40,background:T.border,flexShrink:0}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:700,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.type}</div>
+              <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{b.city} · {b.playTime||"–"}</div>
+            </div>
+            <div style={{textAlign:"right",flexShrink:0}}>
+              <div style={{fontSize:14,fontWeight:800,color:T.orange,fontFamily:"'Poppins',sans-serif"}}>{fmt(b.bandPay)}</div>
+              {isAdmin&&<button onClick={e=>{e.stopPropagation();openEdit(b);}} style={{marginTop:4,padding:"3px 8px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>REDIGER</button>}
+            </div>
+            {past&&<div style={{position:"absolute",right:12,top:8,fontSize:7,color:oA,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>AFHOLDT</div>}
+          </div>
+        );
+      })}
+      {managerBookings.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
+    </div>)}
+
+    {/* Desktop table */}
+    {!isMobile&&<div style={{overflowX:"auto",background:T.border}}>
       <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
         <thead><tr style={{background:T.black}}>
           {["DATO","JOB TYPE","BY","ADRESSE","ANKOMST","SPILLETID","SÆT","BEMAN.","BELØB","BOOKING","BIL+GEAR","ARRANGØR","TELEFON","NOTE","BOOKER",...(isAdmin?[""]:[])].map(h=><th key={h} style={hd}>{h}</th>)}
@@ -641,7 +681,7 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
           })}
         </tbody>
       </table>
-    </div>
+    </div>}
 
     {detailBooking&&<AliasDetailPopup booking={detailBooking} T={T} onClose={()=>setDetailBooking(null)}/>}
 
@@ -1025,19 +1065,20 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
 // ── LOGIN ──────────────────────────────────────────────────────────────────
 function LoginScreen({onLogin,users}){
   const T=DARK;
+  const winW=useWindowWidth();
+  const isMob=winW<500;
   const [email,setEmail]=useState("");const [pass,setPass]=useState("");const [err,setErr]=useState("");
   const handle=()=>{const u=users.find(u=>u.email===email&&u.password===pass);if(u)onLogin(u);else setErr("Forkert email eller adgangskode");};
-  return(<div style={{minHeight:"100vh",background:"#181719",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
+  return(<div style={{minHeight:"100vh",background:"#181719",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden",padding:"20px 16px",boxSizing:"border-box"}}>
     <div style={{position:"absolute",top:"-20%",left:"-10%",width:"50%",height:"60%",background:"radial-gradient(ellipse,#C4521F18 0%,transparent 70%)",pointerEvents:"none"}}/>
     <div style={{position:"absolute",bottom:"-20%",right:"-10%",width:"50%",height:"60%",background:"radial-gradient(ellipse,#1E7B5B12 0%,transparent 70%)",pointerEvents:"none"}}/>
-
-    <div style={{width:440,position:"relative",zIndex:1}}>
-      <div style={{textAlign:"center",marginBottom:52}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",marginBottom:18}}><NAStar size={54} color={T.orange}/></div>
-        <div style={{fontFamily:"'Poppins',sans-serif",fontWeight:800,fontSize:58,letterSpacing:"-0.01em",color:T.white,lineHeight:0.9}}>NORTH<span style={{color:T.orange}}>AVENUE</span></div>
-        <div style={{fontSize:10,color:T.muted,letterSpacing:"0.22em",marginTop:16,fontFamily:"'Poppins',sans-serif"}}>BACKSTAGE · LOG IND</div>
+    <div style={{width:"100%",maxWidth:440,position:"relative",zIndex:1}}>
+      <div style={{textAlign:"center",marginBottom:isMob?32:52}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14}}><NAStar size={isMob?36:54} color={T.orange}/></div>
+        <div style={{fontFamily:"'Poppins',sans-serif",fontWeight:800,fontSize:isMob?36:58,letterSpacing:"-0.01em",color:T.white,lineHeight:0.9}}>NORTH<span style={{color:T.orange}}>AVENUE</span></div>
+        <div style={{fontSize:9,color:T.muted,letterSpacing:"0.18em",marginTop:12,fontFamily:"'Poppins',sans-serif"}}>BACKSTAGE · LOG IND</div>
       </div>
-      <div style={{background:T.dim,padding:36}}>
+      <div style={{background:T.dim,padding:isMob?24:36}}>
         <Field label="EMAIL" T={T}><Inp value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="dit@northavenue.dk" T={T}/></Field>
         <Field label="ADGANGSKODE" T={T}><PwInput value={pass} onChange={e=>setPass(e.target.value)} T={T}/></Field>
         {err&&<div style={{color:T.orange,fontSize:11,marginBottom:10,fontFamily:"'Poppins',sans-serif"}}>{err}</div>}
@@ -1058,13 +1099,43 @@ export default function App(){
   const [users,setUsers]=useState(INIT_USERS);
   const winW=useWindowWidth();
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
+  const logoutTimer=useRef(null);
+
+  const TIMEOUT_MS=60*60*1000; // 1 hour
+
+  // Auto-logout on inactivity
+  useEffect(()=>{
+    if(!user)return;
+    const reset=()=>{
+      clearTimeout(logoutTimer.current);
+      logoutTimer.current=setTimeout(()=>{setUser(null);setView("bookings");},TIMEOUT_MS);
+    };
+    const events=["mousemove","keydown","click","touchstart","scroll"];
+    events.forEach(e=>window.addEventListener(e,reset));
+    reset();
+    return()=>{clearTimeout(logoutTimer.current);events.forEach(e=>window.removeEventListener(e,reset));};
+  },[user]);
 
   const T=darkMode?DARK:LIGHT;
   const curU=user?users.find(u=>u.id===user.id)||user:null;
   const isMobile=winW<768;
-  const isTablet=winW<1100;
+  const isTablet=winW<1400; // wider threshold so laptops get compact layout
 
-  if(!curU)return <LoginScreen onLogin={u=>{setUser(u);setView("bookings");}} users={users}/>;
+  // Load theme from user profile on login
+  const handleLogin=u=>{
+    setUser(u);
+    setView("bookings");
+    if(u.theme==="light")setDarkMode(false);
+    else setDarkMode(true);
+  };
+
+  // Save theme to user profile when changed
+  const handleTheme=val=>{
+    setDarkMode(val);
+    if(user)setUsers(prev=>prev.map(u=>u.id===user.id?{...u,theme:val?"dark":"light"}:u));
+  };
+
+  if(!curU)return <LoginScreen onLogin={handleLogin} users={users}/>;
 
   const isAdmin=curU.role==="admin";
   const isAliasOnly=!isAdmin&&curU.subType==="alias"&&!hasVikar(curU);
@@ -1084,7 +1155,7 @@ export default function App(){
   const effectiveView=(!nav.find(n=>n.id===view))?defaultView:view;
 
   const meta={
-    bookings:{title:"BOOKINGER",      sub:"Klik på en række for at se detaljer · Admins klikker REDIGER"},
+    bookings:{title:"BOOKINGER",      sub:"Klik på en række for at se detaljer"},
     alias:   {title:"ALIAS",          sub:"Klik på en række for at se detaljer"},
     payroll: {title:"LØNOVERSIGT",    sub:"Afholdte jobs og udbetalinger"},
     info:    {title:"AFLØNNING",      sub:"Løn og fordeling i North Avenue"},
@@ -1156,7 +1227,7 @@ export default function App(){
         {effectiveView==="payroll" &&<PayrollView currentUser={curU} bookings={bookings} payments={payments} setPayments={setPayments} users={users} T={T}/>}
         {effectiveView==="info"    &&<InfoView currentUser={curU} T={T}/>}
         {effectiveView==="admin"   &&<AdminView users={users} setUsers={setUsers} T={T}/>}
-        {effectiveView==="profile" &&<ProfileView currentUser={curU} users={users} setUsers={setUsers} T={T} darkMode={darkMode} setDarkMode={setDarkMode}/>}
+        {effectiveView==="profile" &&<ProfileView currentUser={curU} users={users} setUsers={setUsers} T={T} darkMode={darkMode} setDarkMode={handleTheme}/>}
       </div>
     </div>
   </div>);
