@@ -1097,11 +1097,124 @@ export default function App(){
   const [aliasData,setAliasData]=useState(INIT_ALIAS);
   const [payments,setPayments]=useState(INIT_PAYMENTS);
   const [users,setUsers]=useState(INIT_USERS);
+  const [loading,setLoading]=useState(true);
   const winW=useWindowWidth();
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
   const logoutTimer=useRef(null);
 
-  const TIMEOUT_MS=60*60*1000; // 1 hour
+  const TIMEOUT_MS=60*60*1000;
+
+  // Load all data from database on mount
+  useEffect(()=>{
+    const load=async()=>{
+      try{
+        const [u,b,p,a]=await Promise.all([
+          fetch("/api/users").then(r=>r.json()),
+          fetch("/api/bookings").then(r=>r.json()),
+          fetch("/api/payments").then(r=>r.json()),
+          fetch("/api/alias").then(r=>r.json()),
+        ]);
+
+        // Map users from DB format
+        if(Array.isArray(u)&&u.length>0){
+          setUsers(u.map(x=>({
+            ...x,
+            subType:x.sub_type,
+            isAdmin:x.is_admin,
+            musicianId:x.musician_id,
+            tags:JSON.parse(x.tags||"[]"),
+          })));
+        }
+
+        // Map bookings from DB format
+        if(Array.isArray(b)&&b.length>0){
+          setBookings(b.map(x=>({
+            ...x,
+            bandPay:x.band_pay||0,
+            playTime:x.play_time||"",
+            memberIds:JSON.parse(x.member_ids||"[]"),
+            substituteIds:JSON.parse(x.substitute_ids||"[]"),
+          })));
+        }
+
+        // Map payments: group by musician_id
+        if(Array.isArray(p)&&p.length>0){
+          const grouped={};
+          p.forEach(x=>{
+            const mid=x.musician_id;
+            if(!grouped[mid])grouped[mid]=[];
+            grouped[mid].push({id:x.id,date:x.date,amount:x.amount,note:x.note});
+          });
+          setPayments(grouped);
+        }
+
+        // Map alias bookings: group by manager_user_id
+        if(Array.isArray(a)&&a.length>0){
+          const grouped={};
+          a.forEach(x=>{
+            const mid=x.manager_user_id||x.managerUserId;
+            if(!grouped[mid])grouped[mid]=[];
+            grouped[mid].push({
+              ...x,
+              bandPay:x.band_pay||0,
+              bookingFee:x.booking_fee||0,
+              carGear:x.car_gear||false,
+              playTime:x.play_time||"",
+              managerUserId:mid,
+            });
+          });
+          setAliasData(grouped);
+        }
+      }catch(e){
+        console.error("Kunne ikke hente data:",e);
+      }finally{
+        setLoading(false);
+      }
+    };
+    load();
+  },[]);
+
+  // Persist booking changes to DB
+  const handleSetBookings=async(updater)=>{
+    const next=typeof updater==="function"?updater(bookings):updater;
+    setBookings(next);
+    // Find changed/new bookings and save
+    for(const b of next){
+      await fetch("/api/bookings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}).catch(()=>{});
+    }
+  };
+
+  // Persist user changes to DB
+  const handleSetUsers=async(updater)=>{
+    const next=typeof updater==="function"?updater(users):updater;
+    setUsers(next);
+    for(const u of next){
+      await fetch("/api/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(u)}).catch(()=>{});
+    }
+  };
+
+  // Persist payment changes to DB
+  const handleSetPayments=async(updater)=>{
+    const next=typeof updater==="function"?updater(payments):updater;
+    setPayments(next);
+    // Flatten and save all payments
+    for(const [mid,ps] of Object.entries(next)){
+      for(const p of ps){
+        await fetch("/api/payments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...p,musicianId:parseInt(mid)})}).catch(()=>{});
+      }
+    }
+  };
+
+  // Persist alias changes to DB
+  const handleSetAliasData=async(updater)=>{
+    const next=typeof updater==="function"?updater(aliasData):updater;
+    setAliasData(next);
+    for(const [managerId,bookingList] of Object.entries(next)){
+      for(const b of bookingList){
+        await fetch("/api/alias",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...b,managerUserId:managerId})}).catch(()=>{});
+      }
+    }
+  };
 
   // Auto-logout on inactivity
   useEffect(()=>{
@@ -1119,21 +1232,28 @@ export default function App(){
   const T=darkMode?DARK:LIGHT;
   const curU=user?users.find(u=>u.id===user.id)||user:null;
   const isMobile=winW<768;
-  const isTablet=winW<1400; // wider threshold so laptops get compact layout
+  const isTablet=winW<1400;
 
   // Load theme from user profile on login
   const handleLogin=u=>{
     setUser(u);
     setView("bookings");
-    if(u.theme==="light")setDarkMode(false);
+    if(u.theme==="light"||u.theme==="light")setDarkMode(false);
     else setDarkMode(true);
   };
 
   // Save theme to user profile when changed
   const handleTheme=val=>{
     setDarkMode(val);
-    if(user)setUsers(prev=>prev.map(u=>u.id===user.id?{...u,theme:val?"dark":"light"}:u));
+    if(user)handleSetUsers(prev=>prev.map(u=>u.id===user.id?{...u,theme:val?"dark":"light"}:u));
   };
+
+  if(loading)return(
+    <div style={{minHeight:"100vh",background:"#181719",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:20}}>
+      <NAStar size={40} color="#D4622A"/>
+      <div style={{color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",fontSize:11,letterSpacing:"0.2em"}}>INDLÆSER...</div>
+    </div>
+  );
 
   if(!curU)return <LoginScreen onLogin={handleLogin} users={users}/>;
 
@@ -1222,12 +1342,12 @@ export default function App(){
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><NAStar size={10} color={T.orange} opacity={0.6}/><span style={{fontSize:9,color:T.muted,letterSpacing:"0.14em"}}>{meta[effectiveView]?.sub}</span></div>
           <h1 style={{fontSize:isMobile?18:isTablet?22:28,fontWeight:800,color:T.white,margin:0,letterSpacing:"0.04em"}}>{meta[effectiveView]?.title}</h1>
         </div>
-        {effectiveView==="bookings"&&<BookingsView currentUser={curU} bookings={bookings} setBookings={setBookings} users={users} T={T} darkMode={darkMode}/>}
-        {effectiveView==="alias"   &&<AliasView currentUser={curU} aliasData={aliasData} setAliasData={setAliasData} users={users} T={T} darkMode={darkMode}/>}
-        {effectiveView==="payroll" &&<PayrollView currentUser={curU} bookings={bookings} payments={payments} setPayments={setPayments} users={users} T={T}/>}
+        {effectiveView==="bookings"&&<BookingsView currentUser={curU} bookings={bookings} setBookings={handleSetBookings} users={users} T={T} darkMode={darkMode}/>}
+        {effectiveView==="alias"   &&<AliasView currentUser={curU} aliasData={aliasData} setAliasData={handleSetAliasData} users={users} T={T} darkMode={darkMode}/>}
+        {effectiveView==="payroll" &&<PayrollView currentUser={curU} bookings={bookings} payments={payments} setPayments={handleSetPayments} users={users} T={T}/>}
         {effectiveView==="info"    &&<InfoView currentUser={curU} T={T}/>}
-        {effectiveView==="admin"   &&<AdminView users={users} setUsers={setUsers} T={T}/>}
-        {effectiveView==="profile" &&<ProfileView currentUser={curU} users={users} setUsers={setUsers} T={T} darkMode={darkMode} setDarkMode={handleTheme}/>}
+        {effectiveView==="admin"   &&<AdminView users={users} setUsers={handleSetUsers} T={T}/>}
+        {effectiveView==="profile" &&<ProfileView currentUser={curU} users={users} setUsers={handleSetUsers} T={T} darkMode={darkMode} setDarkMode={handleTheme}/>}
       </div>
     </div>
   </div>);
