@@ -395,6 +395,8 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   const [yr,setYr]=useState(CUR_YEAR);
   const [detailBooking,setDetailBooking]=useState(null);
   const [editingBooking,setEditingBooking]=useState(null);
+  const winW=useWindowWidth();
+  const isMobile=winW<768;
 
   const visibleBookings=isSub?bookings.filter(b=>b.substituteIds.includes(currentUser.musicianId)):bookings;
   const filtered=useMemo(()=>visibleBookings.filter(b=>getYear(b.date)===yr),[visibleBookings,yr]);
@@ -420,19 +422,69 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
     ?[{l:"ANTAL JOBS",v:filtered.length},{l:"TOTAL BELØB",v:fmt(totalBand)},{l:"TOTAL LØN (1 MUSIKER)",v:fmt(totalMPay)}]
     :[{l:"JOBS I ALT",v:filtered.length},{l:"MINE JOBS",v:myJobs.length},{l:isSub?"VIKAR LØN":"TOTAL LØN",v:fmt(myEarned)}];
 
+  // ── Mobile card view ───────────────────────────────────────────────────
+  const MobileCards=()=>(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+    {filtered.map(b=>{
+      const past=isPast(b.date);
+      const mp=calcMusicianPay(b.bandPay);
+      const sp=calcSubPay(mp);
+      const pay=isSub?sp:mp;
+      const iAmIn=isSub?b.substituteIds.includes(currentUser.musicianId):b.memberIds.includes(currentUser.musicianId);
+      const isMyJob=isAdmin||iAmIn;
+      const br=PAY_BRACKETS.find(x=>x.pay===pay)||PAY_BRACKETS.slice(-1)[0];
+      const weekday=new Date(b.date).toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
+      const dateStr=new Date(b.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"});
+      return(
+        <div key={b.id} onClick={()=>setDetailBooking(b)}
+          style={{background:T.dim,borderLeft:`3px solid ${past?oA:isMyJob?br.color:T.border}`,padding:"14px 16px",cursor:"pointer",opacity:past?0.65:isMyJob?1:0.3,display:"flex",alignItems:"center",gap:14,position:"relative",transition:"opacity .15s"}}>
+          {/* Date block */}
+          <div style={{textAlign:"center",flexShrink:0,minWidth:42}}>
+            <div style={{fontSize:9,color:past?oA:T.muted,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>{weekday}</div>
+            <div style={{fontSize:18,fontWeight:800,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",lineHeight:1.1}}>{dateStr.split(" ")[0]}</div>
+            <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{dateStr.split(" ")[1]}</div>
+          </div>
+          {/* Divider */}
+          <div style={{width:1,height:40,background:T.border,flexShrink:0}}/>
+          {/* Info */}
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:700,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.type}</div>
+            <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{b.city} · {b.playTime||b.musicStart||"–"}</div>
+          </div>
+          {/* Pay badge */}
+          <div style={{textAlign:"right",flexShrink:0}}>
+            <div style={{fontSize:14,fontWeight:800,color:br.color,fontFamily:"'Poppins',sans-serif"}}>{fmt(pay)}</div>
+            {!isAdmin&&!isSub&&!past&&(
+              <button onClick={e=>{e.stopPropagation();toggleMember(b.id,currentUser.musicianId);}}
+                style={{marginTop:4,padding:"3px 8px",border:`1px solid ${iAmIn?T.green:T.red}`,background:iAmIn?T.green+"22":T.red+"18",color:iAmIn?T.green:T.red,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.06em"}}>
+                {iAmIn?"MED ✓":"FRAVÆRENDE"}
+              </button>
+            )}
+          </div>
+          {/* Past indicator */}
+          {past&&<div style={{position:"absolute",right:12,top:8,fontSize:7,color:oA,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>AFHOLDT</div>}
+        </div>
+      );
+    })}
+    {filtered.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
+  </div>);
+
   // Clickable columns (date through pay) — don't intercept action buttons
   const CLICKABLE_COLS = ["DATO","JOB TYPE","BY","ADRESSE","AFGANG","ANKOMST","SPILLETID","SÆT",...(isAdmin?["BELØB"]:[]),...(isSub?["VIKAR LØN"]:["MUSIKER LØN"])];
 
   return(<div>
     <YearTabs value={yr} onChange={setYr} T={T} years={YEAR_OPTS}/>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:1,marginBottom:20,background:T.border}}>
-      {statItems.map(s=>(<div key={s.l} style={{background:T.dim,padding:"16px 20px"}}>
-        <div style={{fontSize:11,color:T.muted,letterSpacing:"0.1em",marginBottom:8,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{s.l}</div>
-        <div style={{fontSize:26,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em"}}>{s.v}</div>
+    <div style={{display:"grid",gridTemplateColumns:`repeat(${isMobile?1:3},1fr)`,gap:1,marginBottom:16,background:T.border}}>
+      {statItems.map(s=>(<div key={s.l} style={{background:T.dim,padding:isMobile?"12px 14px":"16px 20px"}}>
+        <div style={{fontSize:isMobile?9:11,color:T.muted,letterSpacing:"0.1em",marginBottom:4,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{s.l}</div>
+        <div style={{fontSize:isMobile?18:26,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em"}}>{s.v}</div>
       </div>))}
     </div>
 
-    <div style={{overflowX:"auto",background:T.border}}>
+    {/* Mobile: card view */}
+    {isMobile&&MobileCards()}
+
+    {/* Desktop: table view */}
+    {!isMobile&&<div style={{overflowX:"auto",background:T.border}}>
       <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
         <thead><tr style={{background:T.black}}>
           {["DATO","JOB TYPE","BY","ADRESSE","AFGANG","ANKOMST","SPILLETID","SÆT",
@@ -479,7 +531,6 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
               <td style={{...clickTd(),fontSize:11,color:sC}} onClick={rowClick}>{b.sets}</td>
               {isAdmin&&<td style={{...clickTd(),color:b.bandPay>0?tC:T.red,fontWeight:700,fontFamily:"'Poppins',sans-serif"}} onClick={rowClick}>{fmt(b.bandPay)}</td>}
               <td style={{...clickTd()}} onClick={rowClick}><PayBadge amount={isSub?sp:mp}/></td>
-              {/* Non-clickable from here */}
               {!isSub&&<td style={td()}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{memberUsers.map(u=><UserChip key={u.id} user={u} active={b.memberIds.includes(u.musicianId)} T={T}/>)}</div></td>}
               {!isSub&&<td style={td()}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
                 {b.substituteIds.length===0?<span style={{color:T.border,fontSize:11}}>–</span>:b.substituteIds.map(mid=>{const u=getUserByMid(mid);return u?<UserChip key={mid} user={u} active T={T}/>:null;})}
@@ -500,7 +551,7 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
           })}
         </tbody>
       </table>
-    </div>
+    </div>}
 
     {detailBooking&&<JobDetailPopup booking={detailBooking} users={users} isSub={isSub} T={T} onClose={()=>setDetailBooking(null)}/>}
     {editingBooking&&<BookingEditModal booking={editingBooking} users={users}
