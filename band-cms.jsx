@@ -1056,9 +1056,13 @@ export default function App(){
   const [aliasData,setAliasData]=useState(INIT_ALIAS);
   const [payments,setPayments]=useState(INIT_PAYMENTS);
   const [users,setUsers]=useState(INIT_USERS);
+  const winW=useWindowWidth();
+  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
 
   const T=darkMode?DARK:LIGHT;
   const curU=user?users.find(u=>u.id===user.id)||user:null;
+  const isMobile=winW<768;
+  const isTablet=winW<1100;
 
   if(!curU)return <LoginScreen onLogin={u=>{setUser(u);setView("bookings");}} users={users}/>;
 
@@ -1087,11 +1091,6 @@ export default function App(){
     admin:   {title:"ADMINISTRATION", sub:"Brugere og indstillinger"},
     profile: {title:"MIN PROFIL",     sub:"Rediger dine oplysninger"},
   };
-
-  const winW=useWindowWidth();
-  const isMobile=winW<768;
-  const isTablet=winW<1100;
-  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
 
   return(<div style={{minHeight:"100vh",background:T.black,color:T.white,display:"flex",fontFamily:"'Poppins',sans-serif"}}>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
