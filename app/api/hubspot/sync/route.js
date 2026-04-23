@@ -3,6 +3,9 @@ import { sql } from "../../../../lib/db";
 
 const HS_TOKEN = process.env.HUBSPOT_TOKEN;
 
+// Sync lock — forhindrer dobbelt-sync når URL kaldes hurtigt flere gange
+let syncInProgress = false;
+
 const PROPS = [
   "dealname","closedate","city","adresse","afgang_true","ankomst",
   "musikstart","antal_s_t","amount","hubspot_owner_id","description",
@@ -16,8 +19,6 @@ const OWNER_MAP = {
   "355884485": "Mox",
   "333603023": "Oliver",
 };
-
-let syncInProgress = false;
 
 async function fetchOwners() {
   // Try to fetch additional owners from HubSpot and merge
@@ -75,10 +76,11 @@ function matchAliasManager(raw) {
 }
 
 export async function GET() {
-  if (syncInProgress) {
-    return NextResponse.json({ error: "Sync allerede i gang" }, { status: 429 });
+  if(syncInProgress) {
+    return NextResponse.json({ ok: false, error: "Sync allerede i gang — prøv igen om lidt." }, { status: 429 });
   }
   syncInProgress = true;
+
   try {
     await fetchOwners();
     const deals = await fetchAllDeals();
@@ -86,12 +88,23 @@ export async function GET() {
     let naCount = 0;
     let aliasCount = 0;
     let skipped = 0;
+    const unknownOwners = {}; // Track owner IDs not in map
+    const ownerCounts = {};   // Count owner usage
 
     for(const deal of deals) {
       const p = deal.properties;
       const date = formatDate(p.closedate);
       const hsId = "hs_" + String(deal.id);
-      const booker = OWNER_MAP[String(p.hubspot_owner_id)] || "";
+      const ownerId = String(p.hubspot_owner_id || "");
+      const booker = OWNER_MAP[ownerId] || "";
+
+      // Debug: track owner IDs
+      if(ownerId) {
+        ownerCounts[ownerId] = (ownerCounts[ownerId] || 0) + 1;
+        if(!OWNER_MAP[ownerId]) {
+          unknownOwners[ownerId] = (unknownOwners[ownerId] || 0) + 1;
+        }
+      }
 
       if(!date) { skipped++; continue; }
 
@@ -102,7 +115,6 @@ export async function GET() {
         const managerId = matchAliasManager(p.alias_ansvarlig_1);
         if(!managerId) { skipped++; continue; }
 
-        await sql`DELETE FROM alias_bookings WHERE hs_id = ${hsId}`;
         await sql`
           INSERT INTO alias_bookings (
             hs_id, manager_user_id, date, type, city, address,
@@ -126,11 +138,25 @@ export async function GET() {
             ${booker},
             ${p.description || ""}
           )
+          ON CONFLICT (hs_id) DO UPDATE SET
+            date        = EXCLUDED.date,
+            type        = EXCLUDED.type,
+            city        = EXCLUDED.city,
+            address     = EXCLUDED.address,
+            arrival     = EXCLUDED.arrival,
+            play_time   = EXCLUDED.play_time,
+            sets        = EXCLUDED.sets,
+            musicians   = EXCLUDED.musicians,
+            band_pay    = EXCLUDED.band_pay,
+            booking_fee = EXCLUDED.booking_fee,
+            car_gear    = EXCLUDED.car_gear,
+            contact     = EXCLUDED.contact,
+            phone       = EXCLUDED.phone,
+            booker      = EXCLUDED.booker
         `;
         aliasCount++;
 
       } else {
-        await sql`DELETE FROM bookings WHERE hs_id = ${hsId}`;
         await sql`
           INSERT INTO bookings (
             hs_id, date, departure, arrival, type, city, address,
@@ -150,6 +176,17 @@ export async function GET() {
             ${p.description || ""},
             ${"[1,2,3,4,5,6]"}, ${"[]"}
           )
+          ON CONFLICT (hs_id) DO UPDATE SET
+            date      = EXCLUDED.date,
+            departure = EXCLUDED.departure,
+            arrival   = EXCLUDED.arrival,
+            type      = EXCLUDED.type,
+            city      = EXCLUDED.city,
+            address   = EXCLUDED.address,
+            play_time = EXCLUDED.play_time,
+            sets      = EXCLUDED.sets,
+            band_pay  = EXCLUDED.band_pay,
+            booker    = EXCLUDED.booker
         `;
         naCount++;
       }
@@ -158,7 +195,12 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       total: deals.length,
-      synced: { northAvenue: naCount, alias: aliasCount, skipped }
+      synced: { northAvenue: naCount, alias: aliasCount, skipped },
+      owners: {
+        mapped: OWNER_MAP,
+        usage: ownerCounts,
+        unknownIds: unknownOwners,
+      }
     });
 
   } catch(e) {

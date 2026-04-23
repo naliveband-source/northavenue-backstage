@@ -1,13 +1,9 @@
 import { neon } from "@neondatabase/serverless";
 
-const sql = neon(
-  "postgresql://neondb_owner:npg_H2MDlEmCq3sn@ep-lucky-tree-alan1dtk.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require"
-);
+const sql = neon("postgresql://neondb_owner:npg_H2MDlEmCq3sn@ep-lucky-tree-alan1dtk.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require");
 
-const r1 = await sql`DELETE FROM bookings`;
-console.log(`Deleted rows from bookings`);
+// Slet ALT bookingdata så vi starter frisk
+await sql`DELETE FROM bookings`;
+await sql`DELETE FROM alias_bookings`;
 
-const r2 = await sql`DELETE FROM alias_bookings`;
-console.log(`Deleted rows from alias_bookings`);
-
-console.log("Done.");
+console.log("✅ Alle bookinger slettet — klar til ren HubSpot-sync!");
