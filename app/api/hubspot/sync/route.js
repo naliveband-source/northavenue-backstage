@@ -84,7 +84,7 @@ export async function GET() {
 
         await sql`
           INSERT INTO alias_bookings (
-            id, manager_user_id, date, type, city, address,
+            hs_id, manager_user_id, date, type, city, address,
             arrival, play_time, sets, musicians,
             band_pay, booking_fee, car_gear,
             contact, phone, booker, notes
@@ -107,7 +107,7 @@ export async function GET() {
             ${booker},
             ${p.description || ""}
           )
-          ON CONFLICT (id) DO UPDATE SET
+          ON CONFLICT (hs_id) DO UPDATE SET
             date         = EXCLUDED.date,
             type         = EXCLUDED.type,
             city         = EXCLUDED.city,
