@@ -11,7 +11,6 @@ const PROPS = [
   "tele_pa_kontaktperson__alias_","dealstage"
 ].join(",");
 
-// Cache of HubSpot owner ID → full name
 const OWNER_MAP = {};
 
 async function fetchOwners() {
@@ -43,16 +42,14 @@ function formatDate(ts) {
   return new Date(ts).toISOString().split("T")[0];
 }
 
-// Map alias_ansvarlig_1 value to our user IDs
-// Tries to match by first name or last name (case-insensitive)
 function matchAliasManager(raw) {
   if(!raw) return null;
   const val = raw.toLowerCase();
-  if(val.includes("niklas"))                             return "ua1"; // Niklas Runge
-  if(val.includes("mikkelsen"))                          return "ua2"; // Mikkel Mikkelsen
-  if(val.includes("lasse") || val.includes("herold"))    return "ua3"; // Lasse Herold
-  if(val.includes("jacob") || val.includes("nørregaard")||val.includes("norregaard")) return "ua4"; // Jacob Nørregaard
-  if(val.includes("sjabon"))                             return "ua5"; // Magnus Sjabon
+  if(val.includes("niklas"))                                                               return "ua1";
+  if(val.includes("mikkelsen"))                                                            return "ua2";
+  if(val.includes("lasse")  || val.includes("herold"))                                    return "ua3";
+  if(val.includes("jacob")  || val.includes("nørregaard") || val.includes("norregaard"))  return "ua4";
+  if(val.includes("sjabon"))                                                               return "ua5";
   return null;
 }
 
@@ -73,10 +70,8 @@ export async function GET() {
 
       if(!date) { skipped++; continue; }
 
-      // Determine type via deal_tag
       const tag = (p.deal_tag || "").toLowerCase();
       const isAlias = tag.includes("alias");
-      const isNA    = tag.includes("north avenue") || tag === "" || (!isAlias);
 
       if(isAlias) {
         const managerId = matchAliasManager(p.alias_ansvarlig_1);
@@ -89,9 +84,7 @@ export async function GET() {
             band_pay, booking_fee, car_gear,
             contact, phone, booker, notes
           ) VALUES (
-            ${hsId},
-            ${managerId},
-            ${date},
+            ${hsId}, ${managerId}, ${date},
             ${p.dealname || ""},
             ${p.city || ""},
             ${p.adresse || ""},
@@ -108,32 +101,31 @@ export async function GET() {
             ${p.description || ""}
           )
           ON CONFLICT (hs_id) DO UPDATE SET
-            date         = EXCLUDED.date,
-            type         = EXCLUDED.type,
-            city         = EXCLUDED.city,
-            address      = EXCLUDED.address,
-            arrival      = EXCLUDED.arrival,
-            play_time    = EXCLUDED.play_time,
-            sets         = EXCLUDED.sets,
-            musicians    = EXCLUDED.musicians,
-            band_pay     = EXCLUDED.band_pay,
-            booking_fee  = EXCLUDED.booking_fee,
-            car_gear     = EXCLUDED.car_gear,
-            contact      = EXCLUDED.contact,
-            phone        = EXCLUDED.phone,
-            booker       = EXCLUDED.booker
+            date        = EXCLUDED.date,
+            type        = EXCLUDED.type,
+            city        = EXCLUDED.city,
+            address     = EXCLUDED.address,
+            arrival     = EXCLUDED.arrival,
+            play_time   = EXCLUDED.play_time,
+            sets        = EXCLUDED.sets,
+            musicians   = EXCLUDED.musicians,
+            band_pay    = EXCLUDED.band_pay,
+            booking_fee = EXCLUDED.booking_fee,
+            car_gear    = EXCLUDED.car_gear,
+            contact     = EXCLUDED.contact,
+            phone       = EXCLUDED.phone,
+            booker      = EXCLUDED.booker
         `;
         aliasCount++;
 
-      } else if(isNA) {
+      } else {
         await sql`
           INSERT INTO bookings (
-            id, date, departure, arrival, type, city, address,
+            hs_id, date, departure, arrival, type, city, address,
             play_time, sets, band_pay, booker, notes,
             member_ids, substitute_ids
           ) VALUES (
-            ${hsId},
-            ${date},
+            ${hsId}, ${date},
             ${p.afgang_true || ""},
             ${p.ankomst || ""},
             ${p.dealname || ""},
@@ -144,20 +136,19 @@ export async function GET() {
             ${parseFloat(p.amount) || 0},
             ${booker},
             ${p.description || ""},
-            ${"[]"},
-            ${"[]"}
+            ${"[]"}, ${"[]"}
           )
-          ON CONFLICT (id) DO UPDATE SET
-            date          = EXCLUDED.date,
-            departure     = EXCLUDED.departure,
-            arrival       = EXCLUDED.arrival,
-            type          = EXCLUDED.type,
-            city          = EXCLUDED.city,
-            address       = EXCLUDED.address,
-            play_time     = EXCLUDED.play_time,
-            sets          = EXCLUDED.sets,
-            band_pay      = EXCLUDED.band_pay,
-            booker        = EXCLUDED.booker
+          ON CONFLICT (hs_id) DO UPDATE SET
+            date      = EXCLUDED.date,
+            departure = EXCLUDED.departure,
+            arrival   = EXCLUDED.arrival,
+            type      = EXCLUDED.type,
+            city      = EXCLUDED.city,
+            address   = EXCLUDED.address,
+            play_time = EXCLUDED.play_time,
+            sets      = EXCLUDED.sets,
+            band_pay  = EXCLUDED.band_pay,
+            booker    = EXCLUDED.booker
         `;
         naCount++;
       }
@@ -166,11 +157,7 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       total: deals.length,
-      synced: {
-        northAvenue: naCount,
-        alias: aliasCount,
-        skipped
-      }
+      synced: { northAvenue: naCount, alias: aliasCount, skipped }
     });
 
   } catch(e) {
