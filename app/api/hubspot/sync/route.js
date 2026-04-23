@@ -96,6 +96,7 @@ export async function GET() {
         const managerId = matchAliasManager(p.alias_ansvarlig_1);
         if(!managerId) { skipped++; continue; }
 
+        await sql`DELETE FROM alias_bookings WHERE hs_id = ${hsId}`;
         await sql`
           INSERT INTO alias_bookings (
             hs_id, manager_user_id, date, type, city, address,
@@ -119,25 +120,11 @@ export async function GET() {
             ${booker},
             ${p.description || ""}
           )
-          ON CONFLICT (hs_id) DO UPDATE SET
-            date        = EXCLUDED.date,
-            type        = EXCLUDED.type,
-            city        = EXCLUDED.city,
-            address     = EXCLUDED.address,
-            arrival     = EXCLUDED.arrival,
-            play_time   = EXCLUDED.play_time,
-            sets        = EXCLUDED.sets,
-            musicians   = EXCLUDED.musicians,
-            band_pay    = EXCLUDED.band_pay,
-            booking_fee = EXCLUDED.booking_fee,
-            car_gear    = EXCLUDED.car_gear,
-            contact     = EXCLUDED.contact,
-            phone       = EXCLUDED.phone,
-            booker      = EXCLUDED.booker
         `;
         aliasCount++;
 
       } else {
+        await sql`DELETE FROM bookings WHERE hs_id = ${hsId}`;
         await sql`
           INSERT INTO bookings (
             hs_id, date, departure, arrival, type, city, address,
@@ -157,17 +144,6 @@ export async function GET() {
             ${p.description || ""},
             ${"[1,2,3,4,5,6]"}, ${"[]"}
           )
-          ON CONFLICT (hs_id) DO UPDATE SET
-            date      = EXCLUDED.date,
-            departure = EXCLUDED.departure,
-            arrival   = EXCLUDED.arrival,
-            type      = EXCLUDED.type,
-            city      = EXCLUDED.city,
-            address   = EXCLUDED.address,
-            play_time = EXCLUDED.play_time,
-            sets      = EXCLUDED.sets,
-            band_pay  = EXCLUDED.band_pay,
-            booker    = EXCLUDED.booker
         `;
         naCount++;
       }
