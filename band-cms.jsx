@@ -793,6 +793,7 @@ function AdminView({users,setUsers,T}){
   const [form,setForm]=useState(blank);
   const [confirmRemoveUser,setConfirmRemoveUser]=useState(null);
   const avatarRef=useRef();
+  const [syncState,setSyncState]=useState({loading:false,msg:null});
   const nextMid=()=>Math.max(0,...users.map(u=>u.musicianId||0))+1;
   const deriveSubType=(isAdm,tags)=>{
     if(isAdm)return "owner";
@@ -852,10 +853,25 @@ function AdminView({users,setUsers,T}){
         </div>
       </div>);
     })}
-    <div style={{background:T.dim,padding:22,border:`1px solid ${T.border}`,marginTop:8}}>
+    <div style={{background:T.dim,padding:22,borderRadius:12,marginTop:8}}>
       <div style={{fontSize:9,color:T.green,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8}}>HUBSPOT SYNC</div>
       <div style={{fontSize:13,color:T.muted,marginBottom:14,fontFamily:"'Poppins',sans-serif"}}>Synkronisering køres automatisk hver time via HubSpot API.</div>
-      <Btn onClick={()=>{}} color={T.orange}>SYNKRONISER NU →</Btn>
+      <Btn onClick={async()=>{
+        setSyncState({loading:true,msg:null});
+        try{
+          const res=await fetch("/api/hubspot/sync");
+          const data=await res.json();
+          if(data.ok){
+            setSyncState({loading:false,msg:{err:false,text:`✓ Synkroniseret: ${data.synced.northAvenue} NA jobs, ${data.synced.alias} Alias jobs`}});
+            setTimeout(()=>window.location.reload(),1500);
+          } else {
+            setSyncState({loading:false,msg:{err:true,text:data.error||"Fejl ved synk"}});
+          }
+        }catch(e){
+          setSyncState({loading:false,msg:{err:true,text:"Netværksfejl: "+e.message}});
+        }
+      }} color={T.orange}>{syncState.loading?"SYNKRONISERER...":"SYNKRONISER NU →"}</Btn>
+      {syncState.msg&&<div style={{marginTop:12,fontSize:12,color:syncState.msg.err?T.red:T.green,fontFamily:"'Poppins',sans-serif"}}>{syncState.msg.text}</div>}
     </div>
     {confirmRemoveUser&&<ConfirmModal message={`Er du sikker på at du vil fjerne "${confirmRemoveUser.first} ${confirmRemoveUser.last}"? Handlingen kan ikke fortrydes.`} onConfirm={()=>{setUsers(prev=>prev.filter(x=>x.id!==confirmRemoveUser.id));setConfirmRemoveUser(null);}} onCancel={()=>setConfirmRemoveUser(null)} T={T}/>}
     {editing!==null&&(<Modal title={editing==="new"?"OPRET BRUGER":"REDIGER BRUGER"} onClose={()=>setEditing(null)} T={T} wide>
@@ -900,11 +916,100 @@ function AdminView({users,setUsers,T}){
 }
 
 // ── PROFILE ────────────────────────────────────────────────────────────────
+// ── AVATAR EDITOR ─────────────────────────────────────────────────────────
+function AvatarEditor({src,onSave,onClose,T}){
+  const [zoom,setZoom]=useState(1);
+  const [pos,setPos]=useState({x:0,y:0});
+  const [dragging,setDragging]=useState(false);
+  const dragStart=useRef({x:0,y:0,px:0,py:0});
+  const imgRef=useRef();
+  const canvasRef=useRef();
+
+  const onMouseDown=e=>{
+    setDragging(true);
+    const touch=e.touches?e.touches[0]:e;
+    dragStart.current={x:touch.clientX,y:touch.clientY,px:pos.x,py:pos.y};
+  };
+  const onMouseMove=e=>{
+    if(!dragging)return;
+    const touch=e.touches?e.touches[0]:e;
+    const dx=touch.clientX-dragStart.current.x;
+    const dy=touch.clientY-dragStart.current.y;
+    setPos({x:dragStart.current.px+dx,y:dragStart.current.py+dy});
+  };
+  const onMouseUp=()=>setDragging(false);
+
+  useEffect(()=>{
+    if(!dragging)return;
+    window.addEventListener("mousemove",onMouseMove);
+    window.addEventListener("mouseup",onMouseUp);
+    window.addEventListener("touchmove",onMouseMove);
+    window.addEventListener("touchend",onMouseUp);
+    return()=>{
+      window.removeEventListener("mousemove",onMouseMove);
+      window.removeEventListener("mouseup",onMouseUp);
+      window.removeEventListener("touchmove",onMouseMove);
+      window.removeEventListener("touchend",onMouseUp);
+    };
+  },[dragging]);
+
+  const save=()=>{
+    const size=300;
+    const canvas=canvasRef.current;
+    canvas.width=size;canvas.height=size;
+    const ctx=canvas.getContext("2d");
+    const img=imgRef.current;
+    const natW=img.naturalWidth;
+    const natH=img.naturalHeight;
+    const previewSize=300;
+    const imgScale=Math.max(previewSize/natW,previewSize/natH)*zoom;
+    const drawW=natW*imgScale;
+    const drawH=natH*imgScale;
+    // pos.x/y is offset in preview pixels; center at previewSize/2
+    const cx=previewSize/2+pos.x;
+    const cy=previewSize/2+pos.y;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(size/2,size/2,size/2,0,Math.PI*2);
+    ctx.clip();
+    ctx.drawImage(img,cx-drawW/2,cy-drawH/2,drawW,drawH);
+    ctx.restore();
+    const dataUrl=canvas.toDataURL("image/jpeg",0.88);
+    onSave(dataUrl);
+  };
+
+  return(<div style={{position:"fixed",inset:0,background:"#000d",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={onClose}>
+    <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:16,padding:24,maxWidth:380,width:"100%"}} onClick={e=>e.stopPropagation()}>
+      <div style={{fontSize:11,color:T.orange,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:16}}>TILPAS PROFILBILLEDE</div>
+      <div style={{position:"relative",width:300,height:300,margin:"0 auto 16px",background:T.black,borderRadius:12,overflow:"hidden",cursor:dragging?"grabbing":"grab",userSelect:"none"}}
+        onMouseDown={onMouseDown} onTouchStart={onMouseDown}>
+        <img ref={imgRef} src={src} alt=""
+          style={{position:"absolute",left:"50%",top:"50%",transform:`translate(calc(-50% + ${pos.x}px),calc(-50% + ${pos.y}px)) scale(${zoom})`,maxWidth:"none",minWidth:"100%",minHeight:"100%",pointerEvents:"none"}}
+          draggable={false}/>
+        {/* Circle overlay */}
+        <div style={{position:"absolute",inset:0,pointerEvents:"none",background:"radial-gradient(circle,transparent 149px,#000000cc 150px)"}}/>
+      </div>
+      <div style={{marginBottom:16}}>
+        <div style={{fontSize:9,color:T.muted,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",marginBottom:8}}>ZOOM</div>
+        <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={e=>setZoom(parseFloat(e.target.value))}
+          style={{width:"100%",accentColor:T.orange}}/>
+      </div>
+      <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",textAlign:"center",marginBottom:16,lineHeight:1.6}}>Træk billedet for at flytte · skub zoom-slideren for at zoome</div>
+      <canvas ref={canvasRef} style={{display:"none"}}/>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+        <Btn onClick={onClose} color={T.muted} small>ANNULLER</Btn>
+        <Btn onClick={save} color={T.orange} small>GEM BILLEDE</Btn>
+      </div>
+    </div>
+  </div>);
+}
+
 function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
   const u=users.find(x=>x.id===currentUser.id)||currentUser;
   const [form,setForm]=useState({first:u.first||"",last:u.last||"",phone:u.phone||"",email:u.email||""});
   const [pw,setPw]=useState({old:"",next:"",conf:""});
   const [avatar,setAvatar]=useState(u.avatar||null);
+  const [editorSrc,setEditorSrc]=useState(null);
   const [msg,setMsg]=useState(null);const [pwMsg,setPwMsg]=useState(null);
   const fileRef=useRef();
   const saveProfile=()=>{
@@ -921,17 +1026,27 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
     setUsers(prev=>prev.map(x=>x.id===currentUser.id?{...x,password:pw.next}:x));
     setPwMsg({err:false,text:"Adgangskode opdateret ✓"});setPw({old:"",next:"",conf:""});
   };
-  const handleFile=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setAvatar(ev.target.result);r.readAsDataURL(f);};
+  const handleFile=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setEditorSrc(ev.target.result);r.readAsDataURL(f);e.target.value="";};
+  const saveAvatar=cropped=>{
+    setAvatar(cropped);
+    setEditorSrc(null);
+    setUsers(prev=>prev.map(x=>x.id===currentUser.id?{...x,avatar:cropped}:x));
+    setMsg({err:false,text:"Profilbillede gemt ✓"});
+  };
   return(<div style={{maxWidth:500,display:"flex",flexDirection:"column",gap:16}}>
-    <div style={{background:T.dim,padding:28,border:`1px solid ${T.border}`}}>
+    <div style={{background:T.dim,padding:28,borderRadius:12}}>
       <div style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:20}}>PROFILOPLYSNINGER</div>
       <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
-        <div style={{cursor:"pointer"}} onClick={()=>fileRef.current.click()}>
-          {avatar?<img src={avatar} alt="" style={{width:64,height:64,borderRadius:2,objectFit:"cover",border:`2px solid ${T.orange}`}}/>
-            :<div style={{width:64,height:64,background:T.black,border:`2px dashed ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>FOTO</div>}
+        <div style={{cursor:"pointer",position:"relative"}} onClick={()=>fileRef.current.click()}>
+          {avatar?<img src={avatar} alt="" style={{width:72,height:72,borderRadius:"50%",objectFit:"cover",border:`2px solid ${T.orange}`}}/>
+            :<div style={{width:72,height:72,borderRadius:"50%",background:T.black,border:`2px dashed ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>FOTO</div>}
           <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFile}/>
         </div>
-        <div><div style={{fontSize:14,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{u.first} {u.last}</div><div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:4}}>Klik på billedet for at ændre foto</div></div>
+        <div>
+          <div style={{fontSize:14,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{u.first} {u.last}</div>
+          <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:4}}>Klik på billedet for at uploade og tilpasse</div>
+          {avatar&&<button onClick={()=>{setAvatar(null);setUsers(prev=>prev.map(x=>x.id===currentUser.id?{...x,avatar:null}:x));}} style={{marginTop:8,padding:"4px 10px",background:"transparent",border:`1px solid ${T.red}44`,color:T.red,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6,letterSpacing:"0.06em"}}>FJERN BILLEDE</button>}
+        </div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <Field label="FORNAVN" T={T}><Inp value={form.first} onChange={e=>setForm(p=>({...p,first:e.target.value}))} T={T}/></Field>
@@ -942,7 +1057,7 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
       {msg&&<div style={{fontSize:12,color:msg.err?T.red:T.green,marginBottom:10,fontFamily:"'Poppins',sans-serif"}}>{msg.text}</div>}
       <Btn onClick={saveProfile} color={T.orange}>GEM PROFIL →</Btn>
     </div>
-    <div style={{background:T.dim,padding:28,border:`1px solid ${T.border}`}}>
+    <div style={{background:T.dim,padding:28,borderRadius:12}}>
       <div style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:20}}>SKIFT ADGANGSKODE</div>
       <Field label="NUVÆRENDE ADGANGSKODE" T={T}><PwInput value={pw.old} onChange={e=>setPw(p=>({...p,old:e.target.value}))} T={T}/></Field>
       <Field label="NY ADGANGSKODE" T={T}><PwInput value={pw.next} onChange={e=>setPw(p=>({...p,next:e.target.value}))} T={T}/></Field>
@@ -951,19 +1066,20 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
       <Btn onClick={savePw} color={T.orange}>GEM ADGANGSKODE →</Btn>
       <p style={{fontSize:11,color:T.muted,marginTop:12,fontFamily:"'Poppins',sans-serif",lineHeight:1.7}}>Din adgangskode er kun synlig for dig selv.</p>
     </div>
-    <div style={{background:T.dim,padding:28,border:`1px solid ${T.border}`}}>
+    <div style={{background:T.dim,padding:28,borderRadius:12}}>
       <div style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:16}}>TEMA</div>
-      <div style={{display:"flex",gap:1,background:T.border}}>
+      <div style={{display:"flex",gap:8}}>
         {[{id:true,label:"☾ MØRKT",desc:"Mørk baggrund"},{id:false,label:"☀ LYST",desc:"Lys baggrund"}].map(opt=>{
           const active=darkMode===opt.id;
           return(<button key={String(opt.id)} onClick={()=>setDarkMode(opt.id)}
-            style={{flex:1,padding:"14px 16px",background:active?T.dim:T.black,border:"none",borderBottom:active?`2px solid ${T.orange}`:`2px solid transparent`,cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
+            style={{flex:1,padding:"14px 16px",background:active?T.black:"transparent",border:`1px solid ${active?T.orange:T.border}`,borderRadius:10,cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
             <div style={{fontSize:13,fontWeight:active?700:400,color:active?T.white:T.muted,fontFamily:"'Poppins',sans-serif"}}>{opt.label}</div>
             <div style={{fontSize:10,color:active?T.muted:T.border,fontFamily:"'Poppins',sans-serif",marginTop:3}}>{opt.desc}</div>
           </button>);
         })}
       </div>
     </div>
+    {editorSrc&&<AvatarEditor src={editorSrc} onSave={saveAvatar} onClose={()=>setEditorSrc(null)} T={T}/>}
   </div>);
 }
 
