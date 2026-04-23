@@ -48,12 +48,12 @@ function formatDate(ts) {
 function matchAliasManager(raw) {
   if(!raw) return null;
   const val = raw.toLowerCase();
-  if(val.includes("niklas") || val.includes("runge"))    return "ua1";
-  if(val.includes("mikkel") && val.includes("mik"))      return "ua2"; // Mikkel Mikkelsen
-  if(val.includes("lasse")  || val.includes("herold"))   return "ua3";
-  if(val.includes("jacob")  || val.includes("n"))        return "ua4";
-  if(val.includes("magnus") || val.includes("sjabon"))   return "ua5";
-  return null; // unknown — will be skipped
+  if(val.includes("niklas"))                             return "ua1"; // Niklas Runge
+  if(val.includes("mikkelsen"))                          return "ua2"; // Mikkel Mikkelsen
+  if(val.includes("lasse") || val.includes("herold"))    return "ua3"; // Lasse Herold
+  if(val.includes("jacob") || val.includes("nørregaard")||val.includes("norregaard")) return "ua4"; // Jacob Nørregaard
+  if(val.includes("sjabon"))                             return "ua5"; // Magnus Sjabon
+  return null;
 }
 
 export async function GET() {
