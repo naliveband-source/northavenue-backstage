@@ -461,7 +461,8 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
                 </div>
               </div>
               {!isMobile&&!isSub&&(
-                <div style={{display:"flex",gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                  {past&&<span style={{fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:oA+"18",padding:"3px 8px",borderRadius:4,marginRight:4}}>AFHOLDT</span>}
                   {memberUsers.map(u=><UserChip key={u.id} user={u} active={b.memberIds.includes(u.musicianId)} T={T}/>)}
                 </div>
               )}
@@ -481,12 +482,10 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
                 )}
               </div>
             </div>
-            {past&&<div style={{position:"absolute",right:14,top:10,fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:oA+"18",padding:"2px 8px",borderRadius:4}}>AFHOLDT</div>}
-          </div>
-        );
-      })}
-      {filtered.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
-    </div>
+          );
+        })}
+        {filtered.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
+      </div>
 
     {detailBooking&&<JobDetailPopup booking={detailBooking} users={users} isSub={isSub} T={T} onClose={()=>setDetailBooking(null)}/>}
     {editingBooking&&<BookingEditModal booking={editingBooking} users={users}
