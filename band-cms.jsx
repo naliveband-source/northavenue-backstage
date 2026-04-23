@@ -397,7 +397,7 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   const [editingBooking,setEditingBooking]=useState(null);
   const winW=useWindowWidth();
   const isMobile=winW<768;
-
+  const isTablet=winW<1400;
   const visibleBookings=isSub?bookings.filter(b=>b.substituteIds.includes(currentUser.musicianId)):bookings;
   const filtered=useMemo(()=>visibleBookings.filter(b=>getYear(b.date)===yr),[visibleBookings,yr]);
 
@@ -517,6 +517,7 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
   const hd={padding:"9px 12px",textAlign:"left",color:T.muted,fontSize:11,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",whiteSpace:"nowrap",fontWeight:600};
   const winW=useWindowWidth();
   const isMobile=winW<768;
+  const isTablet=winW<1400;
   if(!selManager)return <div style={{color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:14,padding:20}}>Ingen alias-visning tilgængelig.</div>;
 
   return(<div>
