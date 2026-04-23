@@ -417,13 +417,11 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   }));
 
   const oA=darkMode?"#D4622A":"#C4521F";
-  const hd={padding:"9px 12px",textAlign:"left",color:T.muted,fontSize:11,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",whiteSpace:"nowrap",fontWeight:600};
   const statItems=isAdmin
     ?[{l:"ANTAL JOBS",v:filtered.length},{l:"TOTAL BELØB",v:fmt(totalBand)},{l:"TOTAL LØN (1 MUSIKER)",v:fmt(totalMPay)}]
     :[{l:"JOBS I ALT",v:filtered.length},{l:"MINE JOBS",v:myJobs.length},{l:isSub?"VIKAR LØN":"TOTAL LØN",v:fmt(myEarned)}];
 
-  // Clickable columns (date through pay) — don't intercept action buttons
-  const CLICKABLE_COLS = ["DATO","JOB TYPE","BY","ADRESSE","AFGANG","ANKOMST","SPILLETID","SÆT",...(isAdmin?["BELØB"]:[]),...(isSub?["VIKAR LØN"]:["MUSIKER LØN"])];
+  const memberUsers=users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias");
 
   return(<div>
     <YearTabs value={yr} onChange={setYr} T={T} years={YEAR_OPTS}/>
@@ -434,8 +432,8 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
       </div>))}
     </div>
 
-    {/* Card view — all screen sizes */}
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":isTablet?"1fr 1fr":"1fr 1fr 1fr",gap:8}}>
+    {/* Card view — single column all screen sizes */}
+    <div style={{display:"flex",flexDirection:"column",gap:6}}>
       {filtered.map(b=>{
         const past=isPast(b.date);
         const mp=calcMusicianPay(b.bandPay);
@@ -448,37 +446,44 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
         const dateStr=new Date(b.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"});
         return(
           <div key={b.id} onClick={()=>setDetailBooking(b)}
-            style={{background:T.dim,borderLeft:`3px solid ${past?oA:isMyJob?br.color:T.border}`,padding:"14px 16px",cursor:"pointer",opacity:past?0.65:isMyJob?1:0.3,display:"flex",alignItems:"center",gap:14,position:"relative"}}>
-            <div style={{textAlign:"center",flexShrink:0,minWidth:42}}>
+            style={{background:T.dim,borderLeft:`3px solid ${past?oA:isMyJob?br.color:T.border}`,padding:"12px 16px",cursor:"pointer",opacity:past?0.65:isMyJob?1:0.3,display:"flex",alignItems:"center",gap:16,position:"relative"}}>
+            {/* Date */}
+            <div style={{textAlign:"center",flexShrink:0,minWidth:44}}>
               <div style={{fontSize:9,color:past?oA:T.muted,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>{weekday}</div>
-              <div style={{fontSize:18,fontWeight:800,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",lineHeight:1.1}}>{dateStr.split(" ")[0]}</div>
+              <div style={{fontSize:20,fontWeight:800,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",lineHeight:1}}>{dateStr.split(" ")[0]}</div>
               <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{dateStr.split(" ")[1]}</div>
             </div>
-            <div style={{width:1,height:40,background:T.border,flexShrink:0}}/>
+            <div style={{width:1,alignSelf:"stretch",background:T.border,flexShrink:0}}/>
+            {/* Info */}
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:13,fontWeight:700,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.type}</div>
-              <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{b.city} · {b.playTime||"–"}</div>
+              <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{b.city}{b.playTime?` · ${b.playTime}`:""}</div>
             </div>
-            <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{fontSize:14,fontWeight:800,color:br.color,fontFamily:"'Poppins',sans-serif"}}>{isAdmin?fmt(b.bandPay):fmt(pay)}</div>
+            {/* Musician chips — non-mobile only */}
+            {!isMobile&&!isSub&&<div style={{display:"flex",gap:3,flexShrink:0}}>
+              {memberUsers.map(u=><UserChip key={u.id} user={u} active={b.memberIds.includes(u.musicianId)} T={T}/>)}
+            </div>}
+            {/* Pay + button */}
+            <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+              <div style={{fontSize:14,fontWeight:800,color:isAdmin?T.orange:br.color,fontFamily:"'Poppins',sans-serif"}}>{isAdmin?fmt(b.bandPay):fmt(pay)}</div>
               {!isAdmin&&!isSub&&!past&&(
                 <button onClick={e=>{e.stopPropagation();toggleMember(b.id,currentUser.musicianId);}}
-                  style={{marginTop:4,padding:"3px 8px",border:`1px solid ${iAmIn?T.green:T.red}`,background:iAmIn?T.green+"22":T.red+"18",color:iAmIn?T.green:T.red,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>
-                  {iAmIn?"MED ✓":"FRAVÆRENDE"}
+                  style={{padding:"3px 8px",border:`1px solid ${iAmIn?T.red:T.green}`,background:iAmIn?T.red+"18":T.green+"22",color:iAmIn?T.red:T.green,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>
+                  {iAmIn?"MELD FRAVÆRENDE":"MELD PÅ"}
                 </button>
               )}
               {isAdmin&&(
                 <button onClick={e=>{e.stopPropagation();setEditingBooking(b);}}
-                  style={{marginTop:4,padding:"3px 8px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.06em"}}>
+                  style={{padding:"3px 8px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>
                   REDIGER
                 </button>
               )}
             </div>
-            {past&&<div style={{position:"absolute",right:12,top:8,fontSize:7,color:oA,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>AFHOLDT</div>}
+            {past&&<div style={{position:"absolute",right:isAdmin?80:12,top:8,fontSize:7,color:oA,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>AFHOLDT</div>}
           </div>
         );
       })}
-      {filtered.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13,gridColumn:"1/-1"}}>Ingen jobs dette år</div>}
+      {filtered.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
     </div>
 
     {detailBooking&&<JobDetailPopup booking={detailBooking} users={users} isSub={isSub} T={T} onClose={()=>setDetailBooking(null)}/>}
@@ -541,8 +546,8 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
       ))}
     </div>
 
-    {/* Card view — all screen sizes */}
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":isTablet?"1fr 1fr":"1fr 1fr 1fr",gap:8}}>
+    {/* Card view — single column all screen sizes */}
+    <div style={{display:"flex",flexDirection:"column",gap:6}}>
       {managerBookings.map(b=>{
         const past=isPast(b.date);
         const weekday=new Date(b.date).toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
@@ -568,7 +573,7 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
           </div>
         );
       })}
-      {managerBookings.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13,gridColumn:"1/-1"}}>Ingen jobs dette år</div>}
+      {managerBookings.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
     </div>
 
     {detailBooking&&<AliasDetailPopup booking={detailBooking} T={T} onClose={()=>setDetailBooking(null)}/>}

@@ -48,6 +48,7 @@ function cleanDealName(raw) {
     .replace(/^NA Alias\s*/i, "")
     .replace(/^North Avenue\s*/i, "")
     .replace(/^NA\s*/i, "")
+    .replace(/^[-\s]+/, "")
     .trim();
 }
 
@@ -145,7 +146,7 @@ export async function GET() {
             ${parseFloat(p.amount) || 0},
             ${booker},
             ${p.description || ""},
-            ${"[]"}, ${"[]"}
+            ${"[1,2,3,4,5,6]"}, ${"[]"}
           )
           ON CONFLICT (hs_id) DO UPDATE SET
             date      = EXCLUDED.date,
