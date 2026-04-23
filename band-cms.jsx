@@ -572,11 +572,11 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
                 </div>
               </div>
               <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5}}>
+                {past&&<span style={{fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:oA+"18",padding:"3px 8px",borderRadius:4}}>AFHOLDT</span>}
                 <div style={{fontSize:isMobile?14:16,fontWeight:800,color:T.orange,fontFamily:"'Poppins',sans-serif"}}>{fmt(b.bandPay)}</div>
                 {isAdmin&&<button onClick={e=>{e.stopPropagation();openEdit(b);}} style={{padding:"4px 10px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>REDIGER</button>}
               </div>
             </div>
-            {past&&<div style={{position:"absolute",right:14,top:10,fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:oA+"18",padding:"2px 8px",borderRadius:4}}>AFHOLDT</div>}
           </div>
         );
       })}
@@ -748,7 +748,7 @@ function InfoView({currentUser,T}){
       </div>
       <div style={{background:T.dim,borderRadius:12,padding:28}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}><NAStar size={13} color={T.orange}/><span style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700}}>DEN DYNAMISKE FORDELING</span></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:18}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:8,marginBottom:18}}>
           {PAY_BRACKETS.map(br=>(<div key={br.pay} style={{background:T.black,borderRadius:10,padding:"18px 16px",textAlign:"center",borderBottom:`3px solid ${br.color}`}}>
             <div style={{fontSize:9,color:br.color,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",marginBottom:8,fontWeight:700}}>{br.label.toUpperCase()}</div>
             <div style={{fontSize:22,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{fmt(br.pay)}</div>
@@ -1003,13 +1003,14 @@ export default function App(){
   const [payments,setPayments]=useState(INIT_PAYMENTS);
   const [users,setUsers]=useState(INIT_USERS);
   const [loading,setLoading]=useState(true);
+  const [loginLoading,setLoginLoading]=useState(false);
   const winW=useWindowWidth();
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
   const logoutTimer=useRef(null);
 
   const TIMEOUT_MS=60*60*1000;
 
-  // Load all data from database on mount
+  // Load all data from database on mount + restore session
   useEffect(()=>{
     const load=async()=>{
       try{
@@ -1074,6 +1075,15 @@ export default function App(){
         console.error("Kunne ikke hente data:",e);
       }finally{
         setLoading(false);
+        // Restore session from sessionStorage
+        try{
+          const saved=sessionStorage.getItem("na_user");
+          if(saved){
+            const u=JSON.parse(saved);
+            setUser(u);
+            if(u.theme==="light")setDarkMode(false);
+          }
+        }catch(_){}
       }
     };
     load();
@@ -1141,10 +1151,15 @@ export default function App(){
 
   // Load theme from user profile on login
   const handleLogin=u=>{
-    setUser(u);
-    setView("bookings");
-    if(u.theme==="light"||u.theme==="light")setDarkMode(false);
-    else setDarkMode(true);
+    setLoginLoading(true);
+    setTimeout(()=>{
+      setUser(u);
+      setView("bookings");
+      if(u.theme==="light")setDarkMode(false);
+      else setDarkMode(true);
+      try{sessionStorage.setItem("na_user",JSON.stringify(u));}catch(_){}
+      setLoginLoading(false);
+    },1000);
   };
 
   // Save theme to user profile when changed
@@ -1153,10 +1168,10 @@ export default function App(){
     if(user)handleSetUsers(prev=>prev.map(u=>u.id===user.id?{...u,theme:val?"dark":"light"}:u));
   };
 
-  if(loading)return(
+  if(loading||loginLoading)return(
     <div style={{minHeight:"100vh",background:"#181719",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:20}}>
       <NAStar size={40} color="#D4622A"/>
-      <div style={{color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",fontSize:11,letterSpacing:"0.2em"}}>INDLÆSER...</div>
+      <div style={{color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",fontSize:11,letterSpacing:"0.2em"}}>{loginLoading?"LOGGER IND...":"INDLÆSER..."}</div>
     </div>
   );
 
@@ -1209,7 +1224,7 @@ export default function App(){
       </nav>
       <div style={{padding:16,borderTop:`1px solid ${T.border}`}}>
         <div style={{fontSize:13,fontWeight:700,color:T.white,marginBottom:8}}>{curU.first} · {isAdmin?"ADMIN":isSub?"VIKAR":"MUSIKER"}</div>
-        <button onClick={()=>{setUser(null);setView("bookings");setMobileMenuOpen(false);}} style={{width:"100%",padding:"10px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontSize:11,letterSpacing:"0.06em"}}>LOG UD</button>
+        <button onClick={()=>{setUser(null);setView("bookings");setMobileMenuOpen(false);try{sessionStorage.removeItem("na_user");}catch(_){};}} style={{width:"100%",padding:"10px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontSize:11,letterSpacing:"0.06em"}}>LOG UD</button>
       </div>
     </div>)}
 
@@ -1234,7 +1249,7 @@ export default function App(){
             <div style={{fontSize:9,color:T.muted}}>{isAdmin?"ADMIN":isSub?"VIKAR":isAliasOnly?"ALIAS":"MUSIKER"}</div>
           </div>
         </div>
-        <button onClick={()=>{setUser(null);setView("bookings");}} style={{width:"100%",padding:"7px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",transition:"all .15s"}}
+        <button onClick={()=>{setUser(null);setView("bookings");try{sessionStorage.removeItem("na_user");}catch(_){};}} style={{width:"100%",padding:"7px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:6,color:T.muted,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",transition:"all .15s"}}
           onMouseEnter={e=>{e.target.style.borderColor=T.orange;e.target.style.color=T.orange;}} onMouseLeave={e=>{e.target.style.borderColor=T.border;e.target.style.color=T.muted;}}>LOG UD</button>
       </div>
     </div>)}

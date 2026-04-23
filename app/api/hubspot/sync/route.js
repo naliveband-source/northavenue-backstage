@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import { sql } from "../../../../lib/db";
 
@@ -13,37 +11,33 @@ const PROPS = [
   "tele_pa_kontaktperson__alias_","dealstage"
 ].join(",");
 
-const OWNER_MAP = {};
+const OWNER_MAP = {
+  "299786470": "Magnus",
+  "355884485": "Mox",
+  "333603023": "Oliver",
+};
 
 async function fetchOwners() {
-  const res = await fetch("https://api.hubapi.com/crm/v3/owners?limit=100", {
-    headers: { Authorization: `Bearer ${HS_TOKEN}` }
-  });
-  const data = await res.json();
-  (data.results || []).forEach(o => {
-    OWNER_MAP[String(o.id)] = `${o.firstName} ${o.lastName}`.trim();
-  });
+  // Try to fetch additional owners from HubSpot and merge
+  try {
+    const res = await fetch("https://api.hubapi.com/crm/v3/owners?limit=100", {
+      headers: { Authorization: `Bearer ${HS_TOKEN}` }
+    });
+    const data = await res.json();
+    (data.results || []).forEach(o => {
+      if(!OWNER_MAP[String(o.id)]) {
+        OWNER_MAP[String(o.id)] = `${o.firstName} ${o.lastName}`.trim();
+      }
+    });
+  } catch(_) {}
 }
 
 async function fetchAllDeals() {
   let deals = [];
-  let after = 0;
+  let after = undefined;
   while(true) {
-    const res = await fetch("https://api.hubapi.com/crm/v3/objects/deals/search", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${HS_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        filterGroups: [{
-          filters: [{ propertyName: "dealstage", operator: "EQ", value: "closedwon" }]
-        }],
-        properties: PROPS.split(","),
-        limit: 100,
-        after
-      })
-    });
+    const url = `https://api.hubapi.com/crm/v3/objects/deals?limit=100&properties=${PROPS}${after ? `&after=${after}` : ""}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${HS_TOKEN}` } });
     const data = await res.json();
     deals = deals.concat(data.results || []);
     if(!data.paging?.next?.after) break;
@@ -82,9 +76,6 @@ export async function GET() {
   try {
     await fetchOwners();
     const deals = await fetchAllDeals();
-
-    await sql`DELETE FROM bookings       WHERE hs_id LIKE 'hs_%'`;
-    await sql`DELETE FROM alias_bookings WHERE hs_id LIKE 'hs_%'`;
 
     let naCount = 0;
     let aliasCount = 0;
