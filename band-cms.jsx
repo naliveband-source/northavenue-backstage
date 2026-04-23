@@ -44,6 +44,8 @@ const INIT_USERS = [
 ];
 
 const SPOT = {"u1":"#888","u2":"#C4521F","u3":"#B87B30","u4":"#1E7B5B","u5":"#8B3FA8","u6":"#2E6B9B","u7":"#7B2020","u8":"#3B8B6B","u9":"#9B6B2B","ua1":"#4B8B9B","ua2":"#9B4B6B","ua3":"#6B9B4B","ua4":"#8B6B4B","ua5":"#4B6B9B"};
+// Foretrækker brugerens egen farve, fallback til SPOT, fallback til grå
+const userColor = u => (u?.color) || SPOT[u?.id] || "#888";
 
 const INIT_BOOKINGS = [
   {id:1, date:"2025-03-14",departure:"16:00",arrival:"17:30",type:"60 års fødselsdag",          city:"Svendborg",  address:"Brogade 1, 5700",          playTime:"20:00–22:30",sets:"2×80",bandPay:0,    booker:"Magnus",memberIds:[2,3,4,5,6,7],substituteIds:[],notes:"Betales på dagen"},
@@ -149,7 +151,7 @@ function JobDetailPopup({booking,users,isSub,T,onClose}){
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
               {memberUsers.map(u=>{
                 const isIn=booking.memberIds.includes(u.musicianId);
-                const c=SPOT[u.id];
+                const c=userColor(u);
                 return(<div key={u.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:isIn?c+"18":T.black,border:`1px solid ${isIn?c+"44":T.border}`,borderRadius:2,opacity:isIn?1:0.4}}>
                   <span style={{width:18,height:18,background:c+"22",border:`1px solid ${c}`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
                   <span style={{fontSize:11,color:isIn?T.white:T.muted,fontFamily:"'Poppins',sans-serif",fontWeight:isIn?600:400}}>{u.first}</span>
@@ -161,7 +163,7 @@ function JobDetailPopup({booking,users,isSub,T,onClose}){
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {booking.substituteIds.map(mid=>{
                   const u=users.find(x=>x.musicianId===mid);if(!u)return null;
-                  const c=SPOT[u.id];
+                  const c=userColor(u);
                   return(<div key={mid} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:c+"18",border:`1px solid ${c+"44"}`,borderRadius:2}}>
                     <span style={{width:18,height:18,background:c+"22",border:`1px solid ${c}`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
                     <span style={{fontSize:11,color:T.white,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{u.first}</span>
@@ -239,7 +241,7 @@ function PwInput({value,onChange,onKeyDown,T}){
 
 function UserChip({user,active,T}){
   const [open,setOpen]=useState(false);
-  const color=SPOT[user.id]||"#888";
+  const color=userColor(user);
   return(<>
     <span onClick={e=>{e.stopPropagation();setOpen(true);}} title={`${user.first} ${user.last}`}
       style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:6,
@@ -361,7 +363,7 @@ function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
     </Field>
     <div style={{marginBottom:16}}>
       <div style={{fontSize:9,color:T.orange,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:10}}>MUSIKERE</div>
-      {memberUsers.map(u=>{const isIn=form.memberIds.includes(u.musicianId);const c=SPOT[u.id];
+      {memberUsers.map(u=>{const isIn=form.memberIds.includes(u.musicianId);const c=userColor(u);
         return(<div key={u.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 12px",marginBottom:4,background:T.black,border:`1px solid ${isIn?c+"44":T.border}`}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <span style={{width:26,height:26,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
@@ -373,7 +375,7 @@ function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
     </div>
     <div style={{marginBottom:20}}>
       <div style={{fontSize:9,color:T.muted,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:10}}>VIKARER</div>
-      {subUsers.map(u=>{const isIn=form.substituteIds.includes(u.musicianId);const c=SPOT[u.id];
+      {subUsers.map(u=>{const isIn=form.substituteIds.includes(u.musicianId);const c=userColor(u);
         return(<div key={u.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 12px",marginBottom:4,background:T.black,border:`1px solid ${isIn?c+"44":T.border}`}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <span style={{width:26,height:26,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
@@ -534,7 +536,7 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
   return(<div>
     {isAdmin&&visibleManagers.length>1&&(
       <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-        {visibleManagers.map(m=>{const c=SPOT[m.id]||"#888";const active=selManager===m.id;
+        {visibleManagers.map(m=>{const c=userColor(m);const active=selManager===m.id;
           return(<button key={m.id} onClick={()=>setSelManager(m.id)}
             style={{padding:"9px 18px",background:active?c+"22":T.dim,border:`1px solid ${active?c:T.border}`,borderRadius:10,color:active?c:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontWeight:active?700:400,fontSize:12,transition:"all .15s"}}>
             {m.first} {m.last}
@@ -662,7 +664,7 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
       {[{id:"members",l:"NORTH AVENUE"},{id:"owners",l:"EJERE"},{id:"substitutes",l:"VIKARER"}].map(g=>(<button key={g.id} onClick={()=>{setGroup(g.id);setSelIds(null);}} style={tabSt(group===g.id)}>{g.l}</button>))}
     </div>)}
     {isAdmin&&groupUsers.length>1&&(<div style={{display:"flex",gap:6,marginBottom:20,flexWrap:"wrap"}}>
-      {groupUsers.map(u=>{const c=SPOT[u.id];const active=!selIds||selIds.includes(u.id);
+      {groupUsers.map(u=>{const c=userColor(u);const active=!selIds||selIds.includes(u.id);
         return(<button key={u.id} onClick={()=>{
           if(!selIds){setSelIds([u.id]);return;}
           const next=selIds.includes(u.id)?selIds.filter(x=>x!==u.id):[...selIds,u.id];
@@ -677,7 +679,7 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
       const earned=isOwner?jobs.length*OWNER_PAY:isSubU?jobs.reduce((s,b)=>s+calcSubPay(calcMusicianPay(b.bandPay)),0):jobs.reduce((s,b)=>s+calcMusicianPay(b.bandPay),0);
       const myPay=(payments[u.musicianId]||[]).filter(p=>getYear(p.date)===yr);
       const paid=myPay.reduce((s,p)=>s+p.amount,0);
-      const balance=earned+paid;const color=SPOT[u.id];
+      const balance=earned+paid;const color=userColor(u);
       return(<div key={u.id} style={{marginBottom:24}}>
         <div style={{background:T.dim,borderRadius:12,overflow:"hidden",display:"flex",marginBottom:12}}>
           <div style={{width:5,background:color,flexShrink:0}}/>
@@ -793,7 +795,7 @@ function InfoView({currentUser,T}){
 // ── ADMIN ──────────────────────────────────────────────────────────────────
 function AdminView({users,setUsers,T}){
   const [editing,setEditing]=useState(null);
-  const blank={first:"",last:"",initials:"",instrument:"",email:"",password:"",isAdmin:false,tags:[],phone:"",avatar:null};
+  const blank={first:"",last:"",initials:"",instrument:"",email:"",password:"",isAdmin:false,tags:[],phone:"",avatar:null,color:""};
   const [form,setForm]=useState(blank);
   const [confirmRemoveUser,setConfirmRemoveUser]=useState(null);
   const avatarRef=useRef();
@@ -806,7 +808,7 @@ function AdminView({users,setUsers,T}){
     return "member";
   };
   const openNew=()=>{setForm(blank);setEditing("new");};
-  const openEdit=u=>{setForm({first:u.first,last:u.last,initials:u.initials,instrument:u.instrument||"",email:u.email,password:"",isAdmin:u.isAdmin||false,tags:u.tags||[],phone:u.phone||"",avatar:u.avatar||null});setEditing(u);};
+  const openEdit=u=>{setForm({first:u.first,last:u.last,initials:u.initials,instrument:u.instrument||"",email:u.email,password:"",isAdmin:u.isAdmin||false,tags:u.tags||[],phone:u.phone||"",avatar:u.avatar||null,color:u.color||SPOT[u.id]||""});setEditing(u);};
   const toggleTag=tag=>setForm(p=>({...p,tags:p.tags.includes(tag)?p.tags.filter(t=>t!==tag):[...p.tags,tag]}));
   const handleAvatarFile=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setForm(p=>({...p,avatar:ev.target.result}));r.readAsDataURL(f);};
   const save=()=>{
@@ -817,7 +819,7 @@ function AdminView({users,setUsers,T}){
     if(editing==="new"){
       setUsers(prev=>[...prev,{id:`u${Date.now()}`,musicianId:needsMid?nextMid():null,name:form.first,role,subType,isAdmin:form.isAdmin,...form,...(form.password?{}:{password:"changeme"})}]);
     } else {
-      setUsers(prev=>prev.map(u=>u.id===editing.id?{...u,first:form.first,last:form.last,initials:form.initials,instrument:form.instrument,email:form.email,isAdmin:form.isAdmin,role,subType,tags:form.tags,phone:form.phone,name:form.first,avatar:form.avatar,...(form.password?{password:form.password}:{})}:u));
+      setUsers(prev=>prev.map(u=>u.id===editing.id?{...u,first:form.first,last:form.last,initials:form.initials,instrument:form.instrument,email:form.email,isAdmin:form.isAdmin,role,subType,tags:form.tags,phone:form.phone,name:form.first,avatar:form.avatar,color:form.color,...(form.password?{password:form.password}:{})}:u));
     }
     setEditing(null);
   };
@@ -838,7 +840,7 @@ function AdminView({users,setUsers,T}){
       return(<div key={grp.key} style={{marginBottom:20}}>
         <div style={{fontSize:9,color:grp.color,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8}}>{grp.label} · {grpUsers.length}</div>
         <div style={{display:"flex",flexDirection:"column",gap:1,background:T.border}}>
-          {grpUsers.map(u=>{const c=SPOT[u.id]||"#888";return(<div key={`${grp.key}-${u.id}`} style={{background:T.dim,padding:"13px 16px",display:"flex",alignItems:"center",gap:12,borderLeft:`2px solid ${c}`}}>
+          {grpUsers.map(u=>{const c=userColor(u);return(<div key={`${grp.key}-${u.id}`} style={{background:T.dim,padding:"13px 16px",display:"flex",alignItems:"center",gap:12,borderLeft:`2px solid ${c}`}}>
             {u.avatar?<img src={u.avatar} alt="" style={{width:34,height:34,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
               :<div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>}
             <div style={{flex:1,minWidth:0}}>
@@ -850,7 +852,9 @@ function AdminView({users,setUsers,T}){
               </div>
             </div>
             <div style={{display:"flex",gap:5,flexShrink:0}}>
-              <Btn onClick={()=>openEdit(u)} color={T.muted} small>REDIGER</Btn>
+              <button onClick={()=>openEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
               <Btn onClick={()=>setConfirmRemoveUser(u)} color={T.red} small>FJERN</Btn>
             </div>
           </div>);})}
@@ -909,6 +913,19 @@ function AdminView({users,setUsers,T}){
             style={{padding:"6px 14px",border:`1px solid ${active?T.orange:T.border}`,background:active?T.orange+"22":"transparent",color:active?T.orange:T.muted,cursor:"pointer",fontSize:10,fontWeight:700,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.08em",transition:"all .15s"}}>
             {TAG_LABELS[tag]}
           </button>);})}
+        </div>
+      </div>
+      <div style={{marginTop:16,marginBottom:8}}>
+        <div style={{fontSize:9,color:T.muted,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:600,marginBottom:10}}>FARVE</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+          {["#C4521F","#B87B30","#1E7B5B","#8B3FA8","#2E6B9B","#7B2020","#3B8B6B","#9B6B2B","#4B8B9B","#9B4B6B","#6B9B4B","#8B6B4B"].map(c=>{
+            const active=form.color===c;
+            return(<button key={c} onClick={()=>setForm(p=>({...p,color:c}))} title={c}
+              style={{width:30,height:30,background:c,border:active?`3px solid ${T.white}`:"3px solid transparent",borderRadius:8,cursor:"pointer",transition:"all .15s",outline:active?`1px solid ${c}`:"none"}}/>);
+          })}
+          <input type="color" value={form.color||"#888888"} onChange={e=>setForm(p=>({...p,color:e.target.value}))}
+            style={{width:36,height:36,background:"transparent",border:`1px dashed ${T.border}`,borderRadius:8,cursor:"pointer",padding:2}} title="Brugerdefineret farve"/>
+          {form.color&&<button onClick={()=>setForm(p=>({...p,color:""}))} style={{padding:"5px 12px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:6,color:T.muted,cursor:"pointer",fontSize:10,fontFamily:"'Poppins',sans-serif"}}>Ryd</button>}
         </div>
       </div>
       <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16}}>
@@ -1379,7 +1396,7 @@ export default function App(){
       <div style={{padding:isTablet?12:16,borderTop:`1px solid ${T.border}`}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
           {curU.avatar?<img src={curU.avatar} alt="" style={{width:30,height:30,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
-            :<div style={{width:30,height:30,background:(SPOT[curU.id]||T.orange)+"22",border:`1px solid ${SPOT[curU.id]||T.orange}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:SPOT[curU.id]||T.orange,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{curU.initials||"?"}</div>}
+            :<div style={{width:30,height:30,background:userColor(curU)+"22",border:`1px solid ${userColor(curU)}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:userColor(curU),fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{curU.initials||"?"}</div>}
           <div><div style={{fontSize:isTablet?11:13,fontWeight:700,color:T.white}}>{curU.first}</div>
             <div style={{fontSize:9,color:T.muted}}>{isAdmin?"ADMIN":isSub?"VIKAR":isAliasOnly?"ALIAS":"MUSIKER"}</div>
           </div>
