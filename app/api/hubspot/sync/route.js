@@ -103,6 +103,10 @@ export async function GET() {
     await fetchOwners();
     const deals = await fetchAllDeals();
 
+    const originalCount = deals.length;
+    const filteredDeals = deals.filter(d => d.properties?.dealstage === "closedwon");
+    console.log(`Filtered ${originalCount} deals down to ${filteredDeals.length} closedwon deals`);
+
     const stageCounts = {};
     deals.forEach(d => {
       const s = d.properties?.dealstage || "missing";
@@ -112,10 +116,10 @@ export async function GET() {
     let naCount = 0;
     let aliasCount = 0;
     let skipped = 0;
-    const unknownOwners = {}; // Track owner IDs not in map
-    const ownerCounts = {};   // Count owner usage
+    const unknownOwners = {};
+    const ownerCounts = {};
 
-    for(const deal of deals) {
+    for(const deal of filteredDeals) {
       const p = deal.properties;
       const date = formatDate(p.closedate);
       const hsId = "hs_" + String(deal.id);
@@ -218,9 +222,9 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      total: deals.length,
+      total: filteredDeals.length,
       synced: { northAvenue: naCount, alias: aliasCount, skipped },
-      debug: { stageCounts },
+      debug: { originalCount, closedwonCount: filteredDeals.length, stageCounts },
       owners: {
         mapped: OWNER_MAP,
         usage: ownerCounts,
