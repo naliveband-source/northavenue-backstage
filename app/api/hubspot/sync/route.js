@@ -39,8 +39,26 @@ async function fetchAllDeals() {
   let deals = [];
   let after = undefined;
   while(true) {
-    const url = `https://api.hubapi.com/crm/v3/objects/deals?limit=100&properties=${PROPS}${after ? `&after=${after}` : ""}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${HS_TOKEN}` } });
+    const body = {
+      filterGroups: [{
+        filters: [{
+          propertyName: "dealstage",
+          operator: "EQ",
+          value: "closedwon"
+        }]
+      }],
+      properties: PROPS.split(","),
+      limit: 100,
+      ...(after ? { after } : {})
+    };
+    const res = await fetch("https://api.hubapi.com/crm/v3/objects/deals/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${HS_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
     const data = await res.json();
     deals = deals.concat(data.results || []);
     if(!data.paging?.next?.after) break;
