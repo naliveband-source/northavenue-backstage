@@ -50,6 +50,8 @@ function cleanDealName(raw) {
     .replace(/^NA\s*/i, "")
     .trim();
 }
+
+function matchAliasManager(raw) {
   if(!raw) return null;
   const val = raw.toLowerCase();
   if(val.includes("niklas"))                                                               return "ua1";
