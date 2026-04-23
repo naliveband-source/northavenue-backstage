@@ -25,10 +25,23 @@ async function fetchOwners() {
 
 async function fetchAllDeals() {
   let deals = [];
-  let after = undefined;
+  let after = 0;
   while(true) {
-    const url = `https://api.hubapi.com/crm/v3/objects/deals?limit=100&properties=${PROPS}${after ? `&after=${after}` : ""}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${HS_TOKEN}` } });
+    const res = await fetch("https://api.hubapi.com/crm/v3/objects/deals/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${HS_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        filterGroups: [{
+          filters: [{ propertyName: "dealstage", operator: "EQ", value: "closedwon" }]
+        }],
+        properties: PROPS.split(","),
+        limit: 100,
+        after
+      })
+    });
     const data = await res.json();
     deals = deals.concat(data.results || []);
     if(!data.paging?.next?.after) break;
@@ -67,6 +80,9 @@ export async function GET() {
   try {
     await fetchOwners();
     const deals = await fetchAllDeals();
+
+    await sql`DELETE FROM bookings       WHERE hs_id LIKE 'hs_%'`;
+    await sql`DELETE FROM alias_bookings WHERE hs_id LIKE 'hs_%'`;
 
     let naCount = 0;
     let aliasCount = 0;
