@@ -421,8 +421,6 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
     ?[{l:"ANTAL JOBS",v:filtered.length},{l:"TOTAL BELØB",v:fmt(totalBand)},{l:"TOTAL LØN (1 MUSIKER)",v:fmt(totalMPay)}]
     :[{l:"JOBS I ALT",v:filtered.length},{l:"MINE JOBS",v:myJobs.length},{l:isSub?"VIKAR LØN":"TOTAL LØN",v:fmt(myEarned)}];
 
-  const memberUsers=users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias");
-
   return(<div>
     <YearTabs value={yr} onChange={setYr} T={T} years={YEAR_OPTS}/>
     <div style={{display:"grid",gridTemplateColumns:`repeat(${isMobile?1:3},1fr)`,gap:1,marginBottom:16,background:T.border}}>
