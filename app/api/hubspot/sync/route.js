@@ -17,6 +17,8 @@ const OWNER_MAP = {
   "333603023": "Oliver",
 };
 
+let syncInProgress = false;
+
 async function fetchOwners() {
   // Try to fetch additional owners from HubSpot and merge
   try {
@@ -73,6 +75,10 @@ function matchAliasManager(raw) {
 }
 
 export async function GET() {
+  if (syncInProgress) {
+    return NextResponse.json({ error: "Sync allerede i gang" }, { status: 429 });
+  }
+  syncInProgress = true;
   try {
     await fetchOwners();
     const deals = await fetchAllDeals();
@@ -157,5 +163,7 @@ export async function GET() {
 
   } catch(e) {
     return NextResponse.json({ error: e.message, stack: e.stack }, { status: 500 });
+  } finally {
+    syncInProgress = false;
   }
 }
