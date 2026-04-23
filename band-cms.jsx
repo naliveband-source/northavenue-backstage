@@ -240,7 +240,7 @@ function UserChip({user,active,T}){
   const [open,setOpen]=useState(false);
   const color=SPOT[user.id]||"#888";
   return(<>
-    <span onClick={()=>setOpen(true)} title={`${user.first} ${user.last}`}
+    <span onClick={e=>{e.stopPropagation();setOpen(true);}} title={`${user.first} ${user.last}`}
       style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:6,
         background:active?color+"33":"#2A262833",border:`1px solid ${active?color+"55":color+"22"}`,color:active?color:color+"77",
         fontSize:10,fontWeight:700,fontFamily:"'Poppins',sans-serif",cursor:"pointer",flexShrink:0,userSelect:"none",
