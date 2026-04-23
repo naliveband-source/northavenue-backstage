@@ -56,6 +56,11 @@ function matchAliasManager(raw) {
 export async function GET() {
   try {
     await fetchOwners();
+
+    // Ryd eksisterende HubSpot-data før ny sync
+    await sql`DELETE FROM bookings WHERE hs_id IS NOT NULL AND hs_id LIKE 'hs_%'`;
+    await sql`DELETE FROM alias_bookings WHERE hs_id IS NOT NULL AND hs_id LIKE 'hs_%'`;
+
     const deals = await fetchAllDeals();
 
     let naCount = 0;
