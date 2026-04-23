@@ -738,6 +738,8 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
 // ── INFO ───────────────────────────────────────────────────────────────────
 function InfoView({currentUser,T}){
   const isSub=hasVikar(currentUser)&&!currentUser.isAdmin;
+  const winW=useWindowWidth();
+  const isMobile=winW<768;
   return(<div style={{maxWidth:760,display:"flex",flexDirection:"column",gap:12}}>
     {!isSub&&(<>
       <div style={{background:T.dim,borderRadius:12,padding:28}}>
