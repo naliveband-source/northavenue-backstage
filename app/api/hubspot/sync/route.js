@@ -103,6 +103,12 @@ export async function GET() {
     await fetchOwners();
     const deals = await fetchAllDeals();
 
+    const stageCounts = {};
+    deals.forEach(d => {
+      const s = d.properties?.dealstage || "missing";
+      stageCounts[s] = (stageCounts[s] || 0) + 1;
+    });
+
     let naCount = 0;
     let aliasCount = 0;
     let skipped = 0;
@@ -214,6 +220,7 @@ export async function GET() {
       ok: true,
       total: deals.length,
       synced: { northAvenue: naCount, alias: aliasCount, skipped },
+      debug: { stageCounts },
       owners: {
         mapped: OWNER_MAP,
         usage: ownerCounts,
