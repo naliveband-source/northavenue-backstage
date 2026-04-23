@@ -1,0 +1,179 @@
+import { NextResponse } from "next/server";
+import { sql } from "../../../../lib/db";
+
+const HS_TOKEN = process.env.HUBSPOT_TOKEN;
+
+const PROPS = [
+  "dealname","closedate","city","adresse","afgang_true","ankomst",
+  "musikstart","antal_s_t","amount","hubspot_owner_id","description",
+  "deal_tag","alias_ansvarlig_1","alias_amount","alias_bil___gear",
+  "alias_storrelse","kontaktperson_til_jobbet__alias_",
+  "tele_pa_kontaktperson__alias_","dealstage"
+].join(",");
+
+// Cache of HubSpot owner ID → full name
+const OWNER_MAP = {};
+
+async function fetchOwners() {
+  const res = await fetch("https://api.hubapi.com/crm/v3/owners?limit=100", {
+    headers: { Authorization: `Bearer ${HS_TOKEN}` }
+  });
+  const data = await res.json();
+  (data.results || []).forEach(o => {
+    OWNER_MAP[String(o.id)] = `${o.firstName} ${o.lastName}`.trim();
+  });
+}
+
+async function fetchAllDeals() {
+  let deals = [];
+  let after = undefined;
+  while(true) {
+    const url = `https://api.hubapi.com/crm/v3/objects/deals?limit=100&properties=${PROPS}${after ? `&after=${after}` : ""}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${HS_TOKEN}` } });
+    const data = await res.json();
+    deals = deals.concat(data.results || []);
+    if(!data.paging?.next?.after) break;
+    after = data.paging.next.after;
+  }
+  return deals;
+}
+
+function formatDate(ts) {
+  if(!ts) return null;
+  return new Date(ts).toISOString().split("T")[0];
+}
+
+// Map alias_ansvarlig_1 value to our user IDs
+// Tries to match by first name or last name (case-insensitive)
+function matchAliasManager(raw) {
+  if(!raw) return null;
+  const val = raw.toLowerCase();
+  if(val.includes("niklas") || val.includes("runge"))    return "ua1";
+  if(val.includes("mikkel") && val.includes("mik"))      return "ua2"; // Mikkel Mikkelsen
+  if(val.includes("lasse")  || val.includes("herold"))   return "ua3";
+  if(val.includes("jacob")  || val.includes("n"))        return "ua4";
+  if(val.includes("magnus") || val.includes("sjabon"))   return "ua5";
+  return null; // unknown — will be skipped
+}
+
+export async function GET() {
+  try {
+    await fetchOwners();
+    const deals = await fetchAllDeals();
+
+    let naCount = 0;
+    let aliasCount = 0;
+    let skipped = 0;
+
+    for(const deal of deals) {
+      const p = deal.properties;
+      const date = formatDate(p.closedate);
+      const hsId = "hs_" + String(deal.id);
+      const booker = OWNER_MAP[String(p.hubspot_owner_id)] || "";
+
+      if(!date) { skipped++; continue; }
+
+      // Determine type via deal_tag
+      const tag = (p.deal_tag || "").toLowerCase();
+      const isAlias = tag.includes("alias");
+      const isNA    = tag.includes("north avenue") || tag === "" || (!isAlias);
+
+      if(isAlias) {
+        const managerId = matchAliasManager(p.alias_ansvarlig_1);
+        if(!managerId) { skipped++; continue; }
+
+        await sql`
+          INSERT INTO alias_bookings (
+            id, manager_user_id, date, type, city, address,
+            arrival, play_time, sets, musicians,
+            band_pay, booking_fee, car_gear,
+            contact, phone, booker, notes
+          ) VALUES (
+            ${hsId},
+            ${managerId},
+            ${date},
+            ${p.dealname || ""},
+            ${p.city || ""},
+            ${p.adresse || ""},
+            ${p.ankomst || ""},
+            ${p.musikstart || ""},
+            ${p.antal_s_t || ""},
+            ${parseInt(p.alias_storrelse) || 0},
+            ${parseFloat(p.alias_amount) || 0},
+            ${parseFloat(p.amount) || 0},
+            ${p.alias_bil___gear === "ja" || p.alias_bil___gear === "Ja" || p.alias_bil___gear === "true"},
+            ${p.kontaktperson_til_jobbet__alias_ || ""},
+            ${p.tele_pa_kontaktperson__alias_ || ""},
+            ${booker},
+            ${p.description || ""}
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            date         = EXCLUDED.date,
+            type         = EXCLUDED.type,
+            city         = EXCLUDED.city,
+            address      = EXCLUDED.address,
+            arrival      = EXCLUDED.arrival,
+            play_time    = EXCLUDED.play_time,
+            sets         = EXCLUDED.sets,
+            musicians    = EXCLUDED.musicians,
+            band_pay     = EXCLUDED.band_pay,
+            booking_fee  = EXCLUDED.booking_fee,
+            car_gear     = EXCLUDED.car_gear,
+            contact      = EXCLUDED.contact,
+            phone        = EXCLUDED.phone,
+            booker       = EXCLUDED.booker
+        `;
+        aliasCount++;
+
+      } else if(isNA) {
+        await sql`
+          INSERT INTO bookings (
+            id, date, departure, arrival, type, city, address,
+            play_time, sets, band_pay, booker, notes,
+            member_ids, substitute_ids
+          ) VALUES (
+            ${hsId},
+            ${date},
+            ${p.afgang_true || ""},
+            ${p.ankomst || ""},
+            ${p.dealname || ""},
+            ${p.city || ""},
+            ${p.adresse || ""},
+            ${p.musikstart || ""},
+            ${p.antal_s_t || ""},
+            ${parseFloat(p.amount) || 0},
+            ${booker},
+            ${p.description || ""},
+            ${"[]"},
+            ${"[]"}
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            date          = EXCLUDED.date,
+            departure     = EXCLUDED.departure,
+            arrival       = EXCLUDED.arrival,
+            type          = EXCLUDED.type,
+            city          = EXCLUDED.city,
+            address       = EXCLUDED.address,
+            play_time     = EXCLUDED.play_time,
+            sets          = EXCLUDED.sets,
+            band_pay      = EXCLUDED.band_pay,
+            booker        = EXCLUDED.booker
+        `;
+        naCount++;
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      total: deals.length,
+      synced: {
+        northAvenue: naCount,
+        alias: aliasCount,
+        skipped
+      }
+    });
+
+  } catch(e) {
+    return NextResponse.json({ error: e.message, stack: e.stack }, { status: 500 });
+  }
+}
