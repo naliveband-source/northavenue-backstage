@@ -482,10 +482,11 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
                 )}
               </div>
             </div>
-          );
-        })}
-        {filtered.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
-      </div>
+          </div>
+        );
+      })}
+      {filtered.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
+    </div>
 
     {detailBooking&&<JobDetailPopup booking={detailBooking} users={users} isSub={isSub} T={T} onClose={()=>setDetailBooking(null)}/>}
     {editingBooking&&<BookingEditModal booking={editingBooking} users={users}
