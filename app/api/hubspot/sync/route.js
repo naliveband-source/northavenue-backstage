@@ -69,6 +69,7 @@ export async function GET() {
       const booker = OWNER_MAP[String(p.hubspot_owner_id)] || "";
 
       if(!date) { skipped++; continue; }
+      if(p.dealstage !== "closedwon") { skipped++; continue; }
 
       const tag = (p.deal_tag || "").toLowerCase();
       const isAlias = tag.includes("alias");
