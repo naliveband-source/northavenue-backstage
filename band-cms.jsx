@@ -226,11 +226,11 @@ const NAStar=({size=16,color,opacity=1})=>(
   </svg>
 );
 
-function PwInput({value,onChange,T}){
+function PwInput({value,onChange,onKeyDown,T}){
   const [show,setShow]=useState(false);
   return(<div style={{position:"relative"}}>
-    <input type={show?"text":"password"} value={value} onChange={onChange}
-      style={{width:"100%",padding:"10px 40px 10px 12px",background:T.black,border:`1px solid ${T.border}`,color:T.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"'Poppins',sans-serif",borderRadius:0}}/>
+    <input type={show?"text":"password"} value={value} onChange={onChange} onKeyDown={onKeyDown}
+      style={{width:"100%",padding:"11px 40px 11px 14px",background:T.black,border:`1px solid ${T.border}`,borderRadius:8,color:T.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"'Poppins',sans-serif"}}/>
     <button type="button" onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:T.muted,fontSize:14,padding:0,lineHeight:1}}>{show?"🙈":"👁"}</button>
   </div>);
 }
@@ -240,17 +240,17 @@ function UserChip({user,active,T}){
   const color=SPOT[user.id]||"#888";
   return(<>
     <span onClick={()=>setOpen(true)} title={`${user.first} ${user.last}`}
-      style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:24,height:24,borderRadius:2,
-        background:active?color+"33":"#2A262833",border:`1px solid ${active?color:color+"55"}`,color:active?color:color+"88",
-        fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",cursor:"pointer",flexShrink:0,userSelect:"none",
-        filter:active?"none":"blur(1.5px) grayscale(40%)",opacity:active?1:0.6,transition:"all .2s"}}>
+      style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:6,
+        background:active?color+"33":"#2A262833",border:`1px solid ${active?color+"55":color+"22"}`,color:active?color:color+"77",
+        fontSize:10,fontWeight:700,fontFamily:"'Poppins',sans-serif",cursor:"pointer",flexShrink:0,userSelect:"none",
+        filter:active?"none":"blur(1.5px) grayscale(40%)",opacity:active?1:0.5,transition:"all .2s"}}>
       {user.initials}
     </span>
     {open&&(<div style={{position:"fixed",inset:0,background:"#000d",zIndex:250,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setOpen(false)}>
-      <div style={{background:"#1E1C1D",border:`1px solid ${color}55`,padding:28,minWidth:260,maxWidth:340,boxShadow:"0 16px 48px #0009"}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:"#1E1C1D",border:`1px solid ${color}55`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:18}}>
-          {user.avatar?<img src={user.avatar} alt="" style={{width:52,height:52,borderRadius:2,objectFit:"cover",border:`2px solid ${color}`}}/>
-            :<div style={{width:52,height:52,background:color+"22",border:`2px solid ${color}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color,fontFamily:"'Poppins',sans-serif"}}>{user.initials}</div>}
+          {user.avatar?<img src={user.avatar} alt="" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:`2px solid ${color}`}}/>
+            :<div style={{width:52,height:52,background:color+"22",border:`2px solid ${color}`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color,fontFamily:"'Poppins',sans-serif"}}>{user.initials}</div>}
           <div>
             <div style={{fontSize:17,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{user.first} {user.last}</div>
             <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginTop:3}}>{user.instrument||"–"}</div>
@@ -258,7 +258,7 @@ function UserChip({user,active,T}){
         </div>
         {user.phone&&<div style={{display:"flex",gap:10,marginBottom:6}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{user.phone}</span></div>}
         <div style={{display:"flex",gap:10}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{user.email}</span></div>
-        <button onClick={()=>setOpen(false)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"1px solid #2E2B2C",color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.08em"}}>LUK</button>
+        <button onClick={()=>setOpen(false)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"1px solid #2E2B2C",borderRadius:8,color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.08em"}}>LUK</button>
       </div>
     </div>)}
   </>);
@@ -273,14 +273,14 @@ function PayBadge({amount,color}){
 function Btn({children,onClick,color,style={},small=false}){
   const [h,setH]=useState(false);
   return <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
-    style={{padding:small?"5px 12px":"9px 18px",background:h?color+"dd":color,border:"none",color:"#F8F5E6",fontWeight:700,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:small?10:11,letterSpacing:"0.07em",transition:"all .15s",...style}}>
+    style={{padding:small?"5px 14px":"9px 20px",background:h?color+"dd":color,border:"none",color:"#F8F5E6",fontWeight:700,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:small?10:11,letterSpacing:"0.07em",transition:"all .15s",borderRadius:8,...style}}>
     {children}
   </button>;
 }
 
 function Modal({title,children,onClose,T,wide=false}){
   return(<div style={{position:"fixed",inset:0,background:"#000d",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
-    <div style={{background:T.dim,border:`1px solid ${T.border}`,width:wide?700:440,maxWidth:"96vw",padding:28,maxHeight:"92vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+    <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:16,width:wide?700:440,maxWidth:"96vw",padding:28,maxHeight:"92vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <span style={{fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:T.orange,fontFamily:"'Poppins',sans-serif"}}>{title}</span>
         <button onClick={onClose} style={{background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:20,lineHeight:1}}>×</button>
@@ -303,9 +303,9 @@ function Inp({value,onChange,type="text",placeholder="",T}){
 }
 
 function YearTabs({value,onChange,T,years}){
-  return(<div style={{display:"flex",gap:1,marginBottom:20,background:T.border}}>
+  return(<div style={{display:"flex",gap:8,marginBottom:20}}>
     {years.map(y=>(<button key={y} onClick={()=>onChange(y)}
-      style={{flex:1,padding:"11px",background:value===y?T.dim:T.black,border:"none",borderBottom:value===y?`2px solid ${T.orange}`:"2px solid transparent",color:value===y?T.white:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontWeight:value===y?700:400,fontSize:15,transition:"all .15s"}}>
+      style={{flex:1,padding:"10px",background:value===y?T.orange:T.dim,border:`1px solid ${value===y?T.orange:T.border}`,borderRadius:10,color:value===y?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontWeight:value===y?700:400,fontSize:14,transition:"all .15s"}}>
       {y}
     </button>))}
   </div>);
@@ -423,8 +423,8 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
 
   return(<div>
     <YearTabs value={yr} onChange={setYr} T={T} years={YEAR_OPTS}/>
-    <div style={{display:"grid",gridTemplateColumns:`repeat(${isMobile?1:3},1fr)`,gap:1,marginBottom:16,background:T.border}}>
-      {statItems.map(s=>(<div key={s.l} style={{background:T.dim,padding:isMobile?"12px 14px":"16px 20px"}}>
+    <div style={{display:"grid",gridTemplateColumns:`repeat(${isMobile?1:3},1fr)`,gap:8,marginBottom:16}}>
+      {statItems.map(s=>(<div key={s.l} style={{background:T.dim,borderRadius:12,padding:isMobile?"12px 14px":"16px 20px"}}>
         <div style={{fontSize:isMobile?9:11,color:T.muted,letterSpacing:"0.1em",marginBottom:4,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{s.l}</div>
         <div style={{fontSize:isMobile?18:26,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em"}}>{s.v}</div>
       </div>))}
@@ -444,40 +444,43 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
         const dateStr=new Date(b.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"});
         return(
           <div key={b.id} onClick={()=>setDetailBooking(b)}
-            style={{background:T.dim,borderLeft:`3px solid ${past?oA:isMyJob?br.color:T.border}`,padding:"12px 16px",cursor:"pointer",opacity:past?0.65:isMyJob?1:0.3,display:"flex",alignItems:"center",gap:16,position:"relative"}}>
-            {/* Date */}
-            <div style={{textAlign:"center",flexShrink:0,minWidth:44}}>
-              <div style={{fontSize:9,color:past?oA:T.muted,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>{weekday}</div>
-              <div style={{fontSize:20,fontWeight:800,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",lineHeight:1}}>{dateStr.split(" ")[0]}</div>
-              <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{dateStr.split(" ")[1]}</div>
-            </div>
-            <div style={{width:1,alignSelf:"stretch",background:T.border,flexShrink:0}}/>
-            {/* Info */}
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:700,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.type}</div>
-              <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{b.city}{b.playTime?` · ${b.playTime}`:""}</div>
-            </div>
-            {/* Musician chips — non-mobile only */}
-            {!isMobile&&!isSub&&<div style={{display:"flex",gap:3,flexShrink:0}}>
-              {memberUsers.map(u=><UserChip key={u.id} user={u} active={b.memberIds.includes(u.musicianId)} T={T}/>)}
-            </div>}
-            {/* Pay + button */}
-            <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
-              <div style={{fontSize:14,fontWeight:800,color:isAdmin?T.orange:br.color,fontFamily:"'Poppins',sans-serif"}}>{isAdmin?fmt(b.bandPay):fmt(pay)}</div>
-              {!isAdmin&&!isSub&&!past&&(
-                <button onClick={e=>{e.stopPropagation();toggleMember(b.id,currentUser.musicianId);}}
-                  style={{padding:"3px 8px",border:`1px solid ${iAmIn?T.red:T.green}`,background:iAmIn?T.red+"18":T.green+"22",color:iAmIn?T.red:T.green,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>
-                  {iAmIn?"MELD FRAVÆRENDE":"MELD PÅ"}
-                </button>
+            style={{background:T.dim,borderRadius:12,overflow:"hidden",display:"flex",cursor:"pointer",opacity:past?0.65:isMyJob?1:0.3,position:"relative"}}>
+            <div style={{width:5,background:past?oA:isMyJob?br.color:T.border,flexShrink:0}}/>
+            <div style={{padding:isMobile?"12px 14px":"14px 20px",display:"flex",alignItems:"center",gap:isMobile?12:20,flex:1,minWidth:0}}>
+              <div style={{textAlign:"center",flexShrink:0,minWidth:isMobile?40:52}}>
+                <div style={{fontSize:isMobile?9:10,color:past?oA:T.muted,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>{weekday}</div>
+                <div style={{fontSize:isMobile?20:26,fontWeight:800,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",lineHeight:1}}>{dateStr.split(" ")[0]}</div>
+                <div style={{fontSize:isMobile?10:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{dateStr.split(" ")[1]}</div>
+              </div>
+              <div style={{width:1,alignSelf:"stretch",background:T.border,flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:isMobile?13:15,fontWeight:700,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.type}</div>
+                <div style={{fontSize:isMobile?11:12,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {[b.city,b.playTime,b.booker].filter(Boolean).join(" · ")}
+                </div>
+              </div>
+              {!isMobile&&!isSub&&(
+                <div style={{display:"flex",gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                  {memberUsers.map(u=><UserChip key={u.id} user={u} active={b.memberIds.includes(u.musicianId)} T={T}/>)}
+                </div>
               )}
-              {isAdmin&&(
-                <button onClick={e=>{e.stopPropagation();setEditingBooking(b);}}
-                  style={{padding:"3px 8px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>
-                  REDIGER
-                </button>
-              )}
+              <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5}}>
+                <div style={{fontSize:isMobile?14:16,fontWeight:800,color:isAdmin?T.orange:br.color,fontFamily:"'Poppins',sans-serif"}}>{isAdmin?fmt(b.bandPay):fmt(pay)}</div>
+                {!isAdmin&&!isSub&&!past&&(
+                  <button onClick={e=>{e.stopPropagation();toggleMember(b.id,currentUser.musicianId);}}
+                    style={{padding:"4px 10px",border:`1px solid ${iAmIn?T.red:T.green}`,background:iAmIn?T.red+"18":T.green+"22",color:iAmIn?T.red:T.green,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
+                    {iAmIn?"MELD FRAVÆRENDE":"MELD PÅ"}
+                  </button>
+                )}
+                {isAdmin&&(
+                  <button onClick={e=>{e.stopPropagation();setEditingBooking(b);}}
+                    style={{padding:"4px 10px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
+                    REDIGER
+                  </button>
+                )}
+              </div>
             </div>
-            {past&&<div style={{position:"absolute",right:isAdmin?80:12,top:8,fontSize:7,color:oA,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>AFHOLDT</div>}
+            {past&&<div style={{position:"absolute",right:14,top:10,fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:oA+"18",padding:"2px 8px",borderRadius:4}}>AFHOLDT</div>}
           </div>
         );
       })}
@@ -525,49 +528,54 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
 
   return(<div>
     {isAdmin&&visibleManagers.length>1&&(
-      <div style={{display:"flex",gap:1,marginBottom:20,background:T.border,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
         {visibleManagers.map(m=>{const c=SPOT[m.id]||"#888";const active=selManager===m.id;
           return(<button key={m.id} onClick={()=>setSelManager(m.id)}
-            style={{flex:1,minWidth:100,padding:"10px 12px",background:active?T.dim:T.black,border:"none",borderBottom:active?`2px solid ${c}`:`2px solid transparent`,color:active?T.white:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontWeight:active?700:400,fontSize:12,transition:"all .15s"}}>
+            style={{padding:"9px 18px",background:active?c+"22":T.dim,border:`1px solid ${active?c:T.border}`,borderRadius:10,color:active?c:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontWeight:active?700:400,fontSize:12,transition:"all .15s"}}>
             {m.first} {m.last}
           </button>);
         })}
       </div>
     )}
     <YearTabs value={yr} onChange={setYr} T={T} years={YEAR_OPTS}/>
-    <div style={{display:"grid",gridTemplateColumns:`repeat(${isMobile?1:3},1fr)`,gap:1,marginBottom:20,background:T.border}}>
+    <div style={{display:"grid",gridTemplateColumns:`repeat(${isMobile?1:3},1fr)`,gap:8,marginBottom:20}}>
       {[{l:"ANTAL JOBS",v:managerBookings.length},{l:"TOTAL BELØB",v:fmt(totalPay)},{l:"TOTAL BOOKING",v:fmt(totalBook)}].map(s=>(
-        <div key={s.l} style={{background:T.dim,padding:isMobile?"12px 14px":"16px 20px"}}>
+        <div key={s.l} style={{background:T.dim,borderRadius:12,padding:isMobile?"12px 14px":"16px 20px"}}>
           <div style={{fontSize:isMobile?9:11,color:T.muted,letterSpacing:"0.1em",marginBottom:4,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{s.l}</div>
           <div style={{fontSize:isMobile?18:26,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em"}}>{s.v}</div>
         </div>
       ))}
     </div>
 
-    {/* Card view — single column all screen sizes */}
-    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+    {/* Alias cards — Design C */}
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>
       {managerBookings.map(b=>{
         const past=isPast(b.date);
         const weekday=new Date(b.date).toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
         const dateStr=new Date(b.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"});
         return(
           <div key={b.id} onClick={()=>setDetailBooking(b)}
-            style={{background:T.dim,borderLeft:`3px solid ${past?oA:T.orange}`,padding:"14px 16px",cursor:"pointer",opacity:past?0.65:1,display:"flex",alignItems:"center",gap:14,position:"relative"}}>
-            <div style={{textAlign:"center",flexShrink:0,minWidth:42}}>
-              <div style={{fontSize:9,color:past?oA:T.muted,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>{weekday}</div>
-              <div style={{fontSize:18,fontWeight:800,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",lineHeight:1.1}}>{dateStr.split(" ")[0]}</div>
-              <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{dateStr.split(" ")[1]}</div>
+            style={{background:T.dim,borderRadius:12,overflow:"hidden",display:"flex",cursor:"pointer",opacity:past?0.65:1,position:"relative"}}>
+            <div style={{width:5,background:past?oA:T.orange,flexShrink:0}}/>
+            <div style={{padding:isMobile?"12px 14px":"14px 20px",display:"flex",alignItems:"center",gap:isMobile?12:20,flex:1,minWidth:0}}>
+              <div style={{textAlign:"center",flexShrink:0,minWidth:isMobile?40:52}}>
+                <div style={{fontSize:isMobile?9:10,color:past?oA:T.muted,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>{weekday}</div>
+                <div style={{fontSize:isMobile?20:26,fontWeight:800,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",lineHeight:1}}>{dateStr.split(" ")[0]}</div>
+                <div style={{fontSize:isMobile?10:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{dateStr.split(" ")[1]}</div>
+              </div>
+              <div style={{width:1,alignSelf:"stretch",background:T.border,flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:isMobile?13:15,fontWeight:700,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.type}</div>
+                <div style={{fontSize:isMobile?11:12,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {[b.city,b.playTime,b.booker].filter(Boolean).join(" · ")}
+                </div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5}}>
+                <div style={{fontSize:isMobile?14:16,fontWeight:800,color:T.orange,fontFamily:"'Poppins',sans-serif"}}>{fmt(b.bandPay)}</div>
+                {isAdmin&&<button onClick={e=>{e.stopPropagation();openEdit(b);}} style={{padding:"4px 10px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>REDIGER</button>}
+              </div>
             </div>
-            <div style={{width:1,height:40,background:T.border,flexShrink:0}}/>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:700,color:past?T.muted:T.white,fontFamily:"'Poppins',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.type}</div>
-              <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{b.city} · {b.playTime||"–"}</div>
-            </div>
-            <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{fontSize:14,fontWeight:800,color:T.orange,fontFamily:"'Poppins',sans-serif"}}>{fmt(b.bandPay)}</div>
-              {isAdmin&&<button onClick={e=>{e.stopPropagation();openEdit(b);}} style={{marginTop:4,padding:"3px 8px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:8,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>REDIGER</button>}
-            </div>
-            {past&&<div style={{position:"absolute",right:12,top:8,fontSize:7,color:oA,fontWeight:700,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif"}}>AFHOLDT</div>}
+            {past&&<div style={{position:"absolute",right:14,top:10,fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:oA+"18",padding:"2px 8px",borderRadius:4}}>AFHOLDT</div>}
           </div>
         );
       })}
@@ -641,20 +649,20 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
     setNa("");setNn("");setNd("");setShowAdd(false);setAddTarget(null);
   };
   const removePay=(mid,pid)=>{setPayments(prev=>({...prev,[mid]:(prev[mid]||[]).filter(p=>p.id!==pid)}));setConfirmRemove(null);};
-  const tabSt=active=>({padding:"10px 16px",background:active?T.dim:T.black,border:"none",borderBottom:active?`2px solid ${T.orange}`:`2px solid transparent`,color:active?T.white:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,letterSpacing:"0.08em",fontWeight:active?700:400,transition:"all .15s"});
+  const tabSt=active=>({padding:"10px 20px",background:active?T.orange:"transparent",border:`1px solid ${active?T.orange:T.border}`,borderRadius:10,color:active?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,letterSpacing:"0.08em",fontWeight:active?700:400,transition:"all .15s"});
 
   return(<div>
     <YearTabs value={yr} onChange={setYr} T={T} years={YEAR_OPTS}/>
-    {isAdmin&&(<div style={{display:"flex",gap:1,marginBottom:20,background:T.border}}>
+    {isAdmin&&(<div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
       {[{id:"members",l:"NORTH AVENUE"},{id:"owners",l:"EJERE"},{id:"substitutes",l:"VIKARER"}].map(g=>(<button key={g.id} onClick={()=>{setGroup(g.id);setSelIds(null);}} style={tabSt(group===g.id)}>{g.l}</button>))}
     </div>)}
-    {isAdmin&&groupUsers.length>1&&(<div style={{display:"flex",gap:5,marginBottom:20,flexWrap:"wrap"}}>
+    {isAdmin&&groupUsers.length>1&&(<div style={{display:"flex",gap:6,marginBottom:20,flexWrap:"wrap"}}>
       {groupUsers.map(u=>{const c=SPOT[u.id];const active=!selIds||selIds.includes(u.id);
         return(<button key={u.id} onClick={()=>{
           if(!selIds){setSelIds([u.id]);return;}
           const next=selIds.includes(u.id)?selIds.filter(x=>x!==u.id):[...selIds,u.id];
           setSelIds(next.length===0||next.length===groupUsers.length?null:next);
-        }} style={{padding:"7px 14px",border:`1px solid ${active?c:T.border}`,background:active?c+"22":"transparent",color:active?c:T.muted,cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"'Poppins',sans-serif",transition:"all .15s"}}>{u.first}</button>);
+        }} style={{padding:"7px 16px",border:`1px solid ${active?c:T.border}`,borderRadius:20,background:active?c+"22":"transparent",color:active?c:T.muted,cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"'Poppins',sans-serif",transition:"all .15s"}}>{u.first}</button>);
       })}
     </div>)}
 
@@ -666,44 +674,47 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
       const paid=myPay.reduce((s,p)=>s+p.amount,0);
       const balance=earned+paid;const color=SPOT[u.id];
       return(<div key={u.id} style={{marginBottom:24}}>
-        <div style={{background:T.dim,borderLeft:`3px solid ${color}`,padding:"18px 22px",marginBottom:12,display:"flex",gap:24,flexWrap:"wrap",alignItems:"center"}}>
-          <div>
-            <div style={{fontSize:9,color:T.muted,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",marginBottom:4}}>MUSIKER</div>
-            <div style={{fontSize:22,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em",lineHeight:1.1}}>{u.first} {u.last}</div>
-            <div style={{fontSize:11,color:T.subText,marginTop:4,fontFamily:"'Poppins',sans-serif"}}>{u.instrument} · {jobs.length} jobs{isOwner?` · ${fmt(OWNER_PAY)}/job`:""}</div>
-          </div>
-          <div style={{display:"flex",gap:24,marginLeft:"auto",flexWrap:"wrap",alignItems:"center"}}>
-            {[{l:"OPTJENT",v:fmt(earned),c:T.green},{l:"UDBETALT",v:fmt(Math.abs(paid)),c:T.red},{l:"TIL GODE",v:fmt(balance),c:balance>=0?T.green:T.red}].map(s=>(<div key={s.l}>
-              <div style={{fontSize:9,color:T.subText,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",marginBottom:4}}>{s.l}</div>
-              <div style={{fontSize:24,fontWeight:800,color:s.c,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em"}}>{s.v}</div>
-            </div>))}
-            {isAdmin&&<Btn onClick={()=>{setAddTarget(u.musicianId);setShowAdd(true);}} color={T.orange} small style={{alignSelf:"center"}}>+ POST</Btn>}
+        <div style={{background:T.dim,borderRadius:12,overflow:"hidden",display:"flex",marginBottom:12}}>
+          <div style={{width:5,background:color,flexShrink:0}}/>
+          <div style={{padding:"18px 22px",display:"flex",gap:24,flexWrap:"wrap",alignItems:"center",flex:1}}>
+            <div>
+              <div style={{fontSize:9,color:T.muted,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",marginBottom:4}}>MUSIKER</div>
+              <div style={{fontSize:22,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em",lineHeight:1.1}}>{u.first} {u.last}</div>
+              <div style={{fontSize:11,color:T.subText,marginTop:4,fontFamily:"'Poppins',sans-serif"}}>{u.instrument} · {jobs.length} jobs{isOwner?` · ${fmt(OWNER_PAY)}/job`:""}</div>
+            </div>
+            <div style={{display:"flex",gap:24,marginLeft:"auto",flexWrap:"wrap",alignItems:"center"}}>
+              {[{l:"OPTJENT",v:fmt(earned),c:T.green},{l:"UDBETALT",v:fmt(Math.abs(paid)),c:T.red},{l:"TIL GODE",v:fmt(balance),c:balance>=0?T.green:T.red}].map(s=>(<div key={s.l}>
+                <div style={{fontSize:9,color:T.subText,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",marginBottom:4}}>{s.l}</div>
+                <div style={{fontSize:24,fontWeight:800,color:s.c,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em"}}>{s.v}</div>
+              </div>))}
+              {isAdmin&&<Btn onClick={()=>{setAddTarget(u.musicianId);setShowAdd(true);}} color={T.orange} small style={{alignSelf:"center"}}>+ POST</Btn>}
+            </div>
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <div>
             <div style={{fontSize:9,color:T.subText,letterSpacing:"0.12em",marginBottom:8,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>JOBS · {jobs.length}</div>
-            <div style={{display:"flex",flexDirection:"column",gap:1,background:T.border}}>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {jobs.map(b=>{const mp=calcMusicianPay(b.bandPay);const pay=isOwner?OWNER_PAY:isSubU?calcSubPay(mp):mp;
-                return(<div key={b.id} style={{background:T.dim,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                return(<div key={b.id} style={{background:T.dim,borderRadius:8,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div><div style={{fontSize:12,color:T.cardText,fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{b.type}</div><div style={{fontSize:10,color:T.subText,marginTop:2,fontFamily:"'Poppins',sans-serif"}}>{fmtDateShort(b.date)} · {b.city}</div></div>
                   <PayBadge amount={pay}/>
                 </div>);
               })}
-              {jobs.length===0&&<div style={{background:T.dim,padding:"16px 14px",textAlign:"center",color:T.muted,fontSize:12,fontFamily:"'Poppins',sans-serif"}}>Ingen afholdte jobs</div>}
+              {jobs.length===0&&<div style={{background:T.dim,borderRadius:8,padding:"16px 14px",textAlign:"center",color:T.muted,fontSize:12,fontFamily:"'Poppins',sans-serif"}}>Ingen afholdte jobs</div>}
             </div>
           </div>
           <div>
             <div style={{fontSize:9,color:T.subText,letterSpacing:"0.12em",marginBottom:8,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>POSTER</div>
-            <div style={{display:"flex",flexDirection:"column",gap:1,background:T.border}}>
-              {myPay.map(p=>(<div key={p.id} style={{background:T.dim,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {myPay.map(p=>(<div key={p.id} style={{background:T.dim,borderRadius:8,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div><div style={{fontSize:12,color:T.cardText,fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{p.note}</div><div style={{fontSize:10,color:T.subText,marginTop:2,fontFamily:"'Poppins',sans-serif"}}>{p.date}</div></div>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <span style={{fontFamily:"'Poppins',sans-serif",fontWeight:700,color:p.amount<0?T.red:T.green,fontSize:12}}>{fmt(p.amount)}</span>
                   {isAdmin&&<button onClick={()=>setConfirmRemove({mid:u.musicianId,pid:p.id,note:p.note})} style={{background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:15,padding:0}}>×</button>}
                 </div>
               </div>))}
-              {myPay.length===0&&<div style={{background:T.dim,padding:"16px 14px",textAlign:"center",color:T.muted,fontSize:12,fontFamily:"'Poppins',sans-serif"}}>Ingen poster</div>}
+              {myPay.length===0&&<div style={{background:T.dim,borderRadius:8,padding:"16px 14px",textAlign:"center",color:T.muted,fontSize:12,fontFamily:"'Poppins',sans-serif"}}>Ingen poster</div>}
             </div>
           </div>
         </div>
@@ -726,23 +737,23 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
 // ── INFO ───────────────────────────────────────────────────────────────────
 function InfoView({currentUser,T}){
   const isSub=hasVikar(currentUser)&&!currentUser.isAdmin;
-  return(<div style={{maxWidth:760,display:"flex",flexDirection:"column",gap:1,background:T.border}}>
+  return(<div style={{maxWidth:760,display:"flex",flexDirection:"column",gap:12}}>
     {!isSub&&(<>
-      <div style={{background:T.dim,padding:28}}>
+      <div style={{background:T.dim,borderRadius:12,padding:28}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}><NAStar size={13} color={T.orange}/><span style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700}}>AFLØNNINGSPRINCIP</span></div>
         <p style={{fontSize:14,color:T.cardText,lineHeight:1.85,margin:0,fontFamily:"'Poppins',sans-serif"}}>
           Vi forsøger altid at give <strong style={{color:T.white}}>så meget i løn som muligt</strong> til alle medlemmer — ejer som musikere. Lønnen er dynamisk og afhænger af det pågældende job. Det sikrer, at et job rent faktisk kan bære sine omkostninger.
         </p>
       </div>
-      <div style={{background:T.dim,padding:28}}>
+      <div style={{background:T.dim,borderRadius:12,padding:28}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}><NAStar size={13} color={T.orange}/><span style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700}}>DEN DYNAMISKE FORDELING</span></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:1,background:T.border,marginBottom:18}}>
-          {PAY_BRACKETS.map(br=>(<div key={br.pay} style={{background:T.black,padding:"18px 16px",textAlign:"center",borderBottom:`2px solid ${br.color}`}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:18}}>
+          {PAY_BRACKETS.map(br=>(<div key={br.pay} style={{background:T.black,borderRadius:10,padding:"18px 16px",textAlign:"center",borderBottom:`3px solid ${br.color}`}}>
             <div style={{fontSize:9,color:br.color,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",marginBottom:8,fontWeight:700}}>{br.label.toUpperCase()}</div>
             <div style={{fontSize:22,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{fmt(br.pay)}</div>
           </div>))}
         </div>
-        <div style={{fontSize:13,color:T.muted,lineHeight:1.75,padding:"12px 16px",background:T.black,borderLeft:`2px solid ${T.orange}`,fontFamily:"'Poppins',sans-serif"}}>
+        <div style={{fontSize:13,color:T.muted,lineHeight:1.75,padding:"12px 16px",background:T.black,borderLeft:`3px solid ${T.orange}`,borderRadius:8,fontFamily:"'Poppins',sans-serif"}}>
           Det vil stadig være 3.000 kr i løn per job i langt de fleste tilfælde. De to ekstra trin sikrer en bedre sammenhæng for job der ellers ville ligge i en gråzone.
         </div>
       </div>
@@ -960,20 +971,22 @@ function LoginScreen({onLogin,users}){
   const isMob=winW<500;
   const [email,setEmail]=useState("");const [pass,setPass]=useState("");const [err,setErr]=useState("");
   const handle=()=>{const u=users.find(u=>u.email===email&&u.password===pass);if(u)onLogin(u);else setErr("Forkert email eller adgangskode");};
+  const onKey=e=>{if(e.key==="Enter")handle();};
   return(<div style={{minHeight:"100vh",background:"#181719",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden",padding:"20px 16px",boxSizing:"border-box"}}>
     <div style={{position:"absolute",top:"-20%",left:"-10%",width:"50%",height:"60%",background:"radial-gradient(ellipse,#C4521F18 0%,transparent 70%)",pointerEvents:"none"}}/>
     <div style={{position:"absolute",bottom:"-20%",right:"-10%",width:"50%",height:"60%",background:"radial-gradient(ellipse,#1E7B5B12 0%,transparent 70%)",pointerEvents:"none"}}/>
-    <div style={{width:"100%",maxWidth:440,position:"relative",zIndex:1}}>
-      <div style={{textAlign:"center",marginBottom:isMob?32:52}}>
+    <div style={{width:"100%",maxWidth:440,position:"relative",zIndex:1,margin:"0 auto"}}>
+      <div style={{textAlign:"center",marginBottom:isMob?32:52,width:"100%"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14}}><NAStar size={isMob?36:54} color={T.orange}/></div>
-        <div style={{fontFamily:"'Poppins',sans-serif",fontWeight:800,fontSize:isMob?36:58,letterSpacing:"-0.01em",color:T.white,lineHeight:0.9}}>NORTH<span style={{color:T.orange}}>AVENUE</span></div>
+        <div style={{fontFamily:"'Poppins',sans-serif",fontWeight:800,fontSize:isMob?32:52,letterSpacing:"-0.01em",color:T.white,lineHeight:0.9}}>NORTH<span style={{color:T.orange}}>AVENUE</span></div>
         <div style={{fontSize:9,color:T.muted,letterSpacing:"0.18em",marginTop:12,fontFamily:"'Poppins',sans-serif"}}>BACKSTAGE · LOG IND</div>
       </div>
-      <div style={{background:T.dim,padding:isMob?24:36}}>
-        <Field label="EMAIL" T={T}><Inp value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="dit@northavenue.dk" T={T}/></Field>
-        <Field label="ADGANGSKODE" T={T}><PwInput value={pass} onChange={e=>setPass(e.target.value)} T={T}/></Field>
+      <div style={{background:T.dim,padding:isMob?24:36,borderRadius:16}}>
+        <Field label="EMAIL" T={T}><input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={onKey} placeholder="dit@northavenue.dk"
+          style={{width:"100%",padding:"11px 14px",background:T.black,border:`1px solid ${T.border}`,borderRadius:8,color:T.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"'Poppins',sans-serif"}}/></Field>
+        <Field label="ADGANGSKODE" T={T}><PwInput value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={onKey} T={T}/></Field>
         {err&&<div style={{color:T.orange,fontSize:11,marginBottom:10,fontFamily:"'Poppins',sans-serif"}}>{err}</div>}
-        <Btn onClick={handle} color={T.orange} style={{width:"100%",padding:"13px",fontSize:13,letterSpacing:"0.08em",marginTop:4}}>LOG IND →</Btn>
+        <button onClick={handle} style={{width:"100%",padding:"13px",fontSize:13,letterSpacing:"0.08em",marginTop:4,background:T.orange,border:"none",borderRadius:8,color:"#F8F5E6",fontWeight:700,cursor:"pointer",fontFamily:"'Poppins',sans-serif"}}>LOG IND →</button>
       </div>
     </div>
   </div>);
