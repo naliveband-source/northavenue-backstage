@@ -434,8 +434,8 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
       </div>))}
     </div>
 
-    {/* Mobile: card view */}
-    {isMobile&&(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+    {/* Card view — all screen sizes */}
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":isTablet?"1fr 1fr":"1fr 1fr 1fr",gap:8}}>
       {filtered.map(b=>{
         const past=isPast(b.date);
         const mp=calcMusicianPay(b.bandPay);
@@ -478,78 +478,8 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
           </div>
         );
       })}
-      {filtered.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
-    </div>)}
-
-    {/* Desktop: table view */}
-    {!isMobile&&<div style={{overflowX:"auto",background:T.border}}>
-      <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-        <thead><tr style={{background:T.black}}>
-          {["DATO","JOB TYPE","BY","ADRESSE","AFGANG","ANKOMST","SPILLETID","SÆT",
-            ...(isAdmin?["BELØB"]:[]),
-            ...(isSub?["VIKAR LØN"]:["MUSIKER LØN"]),
-            ...(!isSub?["MUSIKERE","VIKAR"]:[]),
-            "BOOKER","NOTE",
-            ...(!isAdmin&&!isSub?["STATUS"]:[]),
-            ...(isAdmin?[""]:[]),
-          ].map(h=><th key={h} style={hd}>{h}</th>)}
-        </tr></thead>
-        <tbody>
-          {filtered.map(b=>{
-            const past=isPast(b.date);
-            const mp=calcMusicianPay(b.bandPay);
-            const sp=calcSubPay(mp);
-            const iAmMember=b.memberIds.includes(currentUser.musicianId);
-            const iAmSub=b.substituteIds.includes(currentUser.musicianId);
-            const iAmIn=isSub?iAmSub:iAmMember;
-            const isMyJob=isAdmin||iAmIn;
-            const pastBg=past?(darkMode?`${oA}14`:`${oA}09`):T.dim;
-            const tC=past?(darkMode?"#C8A898":T.muted):isMyJob?T.white:T.muted;
-            const sC=past?(darkMode?"#A09088":T.muted):darkMode?T.cardText:T.muted;
-            const td=(ex={})=>({padding:"11px 10px",background:past?pastBg:T.dim,verticalAlign:"middle",borderBottom:`1px solid ${T.black}`,position:"relative",...ex});
-            const clickTd=(ex={})=>({...td(ex),cursor:"pointer"});
-            const rowClick=(e)=>{
-              // only open if click is on a "plain" cell, not a chip/button
-              if(e.target.tagName==="BUTTON"||e.target.closest("button")||e.target.tagName==="SPAN"&&e.target.style.cursor==="pointer")return;
-              setDetailBooking(b);
-            };
-            return(<tr key={b.id} style={{opacity:past?1:isMyJob?1:0.28}}>
-              <td style={{...clickTd(),paddingLeft:past?"8px":"10px"}} onClick={rowClick}>
-                {past&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:oA}}/>}
-                <span style={{fontFamily:"'Poppins',sans-serif",fontSize:12,color:tC,whiteSpace:"nowrap"}}>
-                  {fmtDateShort(b.date)}{past&&<span style={{marginLeft:6,fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em"}}>AFHOLDT</span>}
-                </span>
-              </td>
-              <td style={{...clickTd(),fontWeight:600,color:tC,whiteSpace:"nowrap"}} onClick={rowClick}>{b.type}</td>
-              <td style={{...clickTd(),color:sC,whiteSpace:"nowrap"}} onClick={rowClick}>{b.city}</td>
-              <td style={{...clickTd(),color:sC,fontSize:11,maxWidth:130,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={b.address} onClick={rowClick}>{b.address||"–"}</td>
-              <td style={{...clickTd(),color:sC}} onClick={rowClick}>{b.departure||"–"}</td>
-              <td style={{...clickTd(),color:sC}} onClick={rowClick}>{b.arrival||"–"}</td>
-              <td style={{...clickTd(),color:sC,whiteSpace:"nowrap"}} onClick={rowClick}>{b.playTime||"–"}</td>
-              <td style={{...clickTd(),fontSize:11,color:sC}} onClick={rowClick}>{b.sets}</td>
-              {isAdmin&&<td style={{...clickTd(),color:b.bandPay>0?tC:T.red,fontWeight:700,fontFamily:"'Poppins',sans-serif"}} onClick={rowClick}>{fmt(b.bandPay)}</td>}
-              <td style={{...clickTd()}} onClick={rowClick}><PayBadge amount={isSub?sp:mp}/></td>
-              {!isSub&&<td style={td()}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{memberUsers.map(u=><UserChip key={u.id} user={u} active={b.memberIds.includes(u.musicianId)} T={T}/>)}</div></td>}
-              {!isSub&&<td style={td()}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-                {b.substituteIds.length===0?<span style={{color:T.border,fontSize:11}}>–</span>:b.substituteIds.map(mid=>{const u=getUserByMid(mid);return u?<UserChip key={mid} user={u} active T={T}/>:null;})}
-              </div></td>}
-              <td style={{...td(),fontSize:11,color:sC}}>{b.booker}</td>
-              <td style={td()}><NotePopup note={b.notes||""} T={T}/></td>
-              {!isAdmin&&!isSub&&<td style={td()}>
-                {!past?<button onClick={()=>toggleMember(b.id,currentUser.musicianId)}
-                    style={{padding:"4px 10px",border:`1px solid ${iAmMember?T.green:T.red}`,background:iAmMember?T.green+"22":T.red+"18",color:iAmMember?T.green:T.red,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",whiteSpace:"nowrap"}}>
-                    {iAmMember?"MED ✓":"FRAVÆRENDE"}
-                  </button>
-                  :<span style={{fontSize:9,color:sC}}>{iAmMember?"SPILLEDE":"FRAVÆRENDE"}</span>}
-              </td>}
-              {isAdmin&&<td style={td()}>
-                <button onClick={e=>{e.stopPropagation();setEditingBooking(b);}} style={{padding:"4px 8px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",whiteSpace:"nowrap"}}>REDIGER</button>
-              </td>}
-            </tr>);
-          })}
-        </tbody>
-      </table>
-    </div>}
+      {filtered.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13,gridColumn:"1/-1"}}>Ingen jobs dette år</div>}
+    </div>
 
     {detailBooking&&<JobDetailPopup booking={detailBooking} users={users} isSub={isSub} T={T} onClose={()=>setDetailBooking(null)}/>}
     {editingBooking&&<BookingEditModal booking={editingBooking} users={users}
@@ -610,8 +540,8 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
       ))}
     </div>
 
-    {/* Mobile card view */}
-    {isMobile&&(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+    {/* Card view — all screen sizes */}
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":isTablet?"1fr 1fr":"1fr 1fr 1fr",gap:8}}>
       {managerBookings.map(b=>{
         const past=isPast(b.date);
         const weekday=new Date(b.date).toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
@@ -637,51 +567,8 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
           </div>
         );
       })}
-      {managerBookings.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
-    </div>)}
-
-    {/* Desktop table */}
-    {!isMobile&&<div style={{overflowX:"auto",background:T.border}}>
-      <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-        <thead><tr style={{background:T.black}}>
-          {["DATO","JOB TYPE","BY","ADRESSE","ANKOMST","SPILLETID","SÆT","BEMAN.","BELØB","BOOKING","BIL+GEAR","ARRANGØR","TELEFON","NOTE","BOOKER",...(isAdmin?[""]:[])].map(h=><th key={h} style={hd}>{h}</th>)}
-        </tr></thead>
-        <tbody>
-          {managerBookings.map(b=>{
-            const past=isPast(b.date);
-            const pastBg=past?(darkMode?`${oA}14`:`${oA}09`):T.dim;
-            const tC=past?(darkMode?"#C8A898":T.muted):T.white;
-            const sC=past?(darkMode?"#A09088":T.muted):darkMode?T.cardText:T.muted;
-            const td=(ex={})=>({padding:"11px 10px",background:past?pastBg:T.dim,verticalAlign:"middle",borderBottom:`1px solid ${T.black}`,position:"relative",...ex});
-            const clickTd=(ex={})=>({...td(ex),cursor:"pointer"});
-            const rowClick=(e)=>{if(e.target.tagName==="BUTTON"||e.target.closest("button"))return;setDetailBooking(b);};
-            return(<tr key={b.id}>
-              <td style={{...clickTd(),paddingLeft:past?"8px":"10px"}} onClick={rowClick}>
-                {past&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:oA}}/>}
-                <span style={{fontSize:12,color:tC,whiteSpace:"nowrap",fontFamily:"'Poppins',sans-serif"}}>
-                  {fmtDateShort(b.date)}{past&&<span style={{marginLeft:6,fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em"}}>AFHOLDT</span>}
-                </span>
-              </td>
-              <td style={{...clickTd(),fontWeight:600,color:tC,whiteSpace:"nowrap"}} onClick={rowClick}>{b.type}</td>
-              <td style={{...clickTd(),color:sC,whiteSpace:"nowrap"}} onClick={rowClick}>{b.city}</td>
-              <td style={{...clickTd(),color:sC,fontSize:11,maxWidth:140,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={b.address} onClick={rowClick}>{b.address}</td>
-              <td style={{...clickTd(),color:sC}} onClick={rowClick}>{b.arrival||"–"}</td>
-              <td style={{...clickTd(),color:sC,whiteSpace:"nowrap"}} onClick={rowClick}>{b.playTime||"–"}</td>
-              <td style={{...clickTd(),fontSize:11,color:sC}} onClick={rowClick}>{b.sets}</td>
-              <td style={{...clickTd(),color:sC,textAlign:"center"}} onClick={rowClick}>{b.musicians}</td>
-              <td style={{...clickTd(),fontWeight:700,color:b.bandPay>0?tC:T.red,fontFamily:"'Poppins',sans-serif"}} onClick={rowClick}>{fmt(b.bandPay)}</td>
-              <td style={{...clickTd(),color:sC,fontFamily:"'Poppins',sans-serif"}} onClick={rowClick}>{fmt(b.bookingFee||0)}</td>
-              <td style={{...clickTd()}} onClick={rowClick}><span style={{fontSize:11,fontWeight:700,color:b.carGear?T.green:T.muted,fontFamily:"'Poppins',sans-serif"}}>{b.carGear?"Ja":"Nej"}</span></td>
-              <td style={{...clickTd(),color:sC,fontSize:11,whiteSpace:"nowrap"}} onClick={rowClick}>{b.contact||"–"}</td>
-              <td style={{...clickTd(),color:sC,fontSize:11}} onClick={rowClick}>{b.phone||"–"}</td>
-              <td style={td()}><NotePopup note={b.notes||""} T={T}/></td>
-              <td style={{...clickTd(),color:sC,fontSize:11}} onClick={rowClick}>{b.booker}</td>
-              {isAdmin&&<td style={td()}><button onClick={e=>{e.stopPropagation();openEdit(b);}} style={{padding:"3px 8px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>REDIGER</button></td>}
-            </tr>);
-          })}
-        </tbody>
-      </table>
-    </div>}
+      {managerBookings.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13,gridColumn:"1/-1"}}>Ingen jobs dette år</div>}
+    </div>
 
     {detailBooking&&<AliasDetailPopup booking={detailBooking} T={T} onClose={()=>setDetailBooking(null)}/>}
 

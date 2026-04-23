@@ -42,7 +42,14 @@ function formatDate(ts) {
   return new Date(ts).toISOString().split("T")[0];
 }
 
-function matchAliasManager(raw) {
+function cleanDealName(raw) {
+  if(!raw) return "";
+  return raw
+    .replace(/^NA Alias\s*/i, "")
+    .replace(/^North Avenue\s*/i, "")
+    .replace(/^NA\s*/i, "")
+    .trim();
+}
   if(!raw) return null;
   const val = raw.toLowerCase();
   if(val.includes("niklas"))                                                               return "ua1";
@@ -56,11 +63,6 @@ function matchAliasManager(raw) {
 export async function GET() {
   try {
     await fetchOwners();
-
-    // Ryd eksisterende HubSpot-data før ny sync
-    await sql`DELETE FROM bookings WHERE hs_id IS NOT NULL AND hs_id LIKE 'hs_%'`;
-    await sql`DELETE FROM alias_bookings WHERE hs_id IS NOT NULL AND hs_id LIKE 'hs_%'`;
-
     const deals = await fetchAllDeals();
 
     let naCount = 0;
@@ -74,7 +76,6 @@ export async function GET() {
       const booker = OWNER_MAP[String(p.hubspot_owner_id)] || "";
 
       if(!date) { skipped++; continue; }
-      if(p.dealstage !== "closedwon") { skipped++; continue; }
 
       const tag = (p.deal_tag || "").toLowerCase();
       const isAlias = tag.includes("alias");
@@ -91,7 +92,7 @@ export async function GET() {
             contact, phone, booker, notes
           ) VALUES (
             ${hsId}, ${managerId}, ${date},
-            ${p.dealname || ""},
+            ${cleanDealName(p.dealname)},
             ${p.city || ""},
             ${p.adresse || ""},
             ${p.ankomst || ""},
@@ -134,7 +135,7 @@ export async function GET() {
             ${hsId}, ${date},
             ${p.afgang_true || ""},
             ${p.ankomst || ""},
-            ${p.dealname || ""},
+            ${cleanDealName(p.dealname)},
             ${p.city || ""},
             ${p.adresse || ""},
             ${p.musikstart || ""},
