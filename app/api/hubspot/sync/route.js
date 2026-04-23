@@ -41,11 +41,17 @@ async function fetchAllDeals() {
   while(true) {
     const body = {
       filterGroups: [{
-        filters: [{
-          propertyName: "dealstage",
-          operator: "EQ",
-          value: "closedwon"
-        }]
+        filters: [
+          {
+            propertyName: "dealstage",
+            operator: "EQ",
+            value: "closedwon"
+          },
+          {
+            propertyName: "adresse",
+            operator: "HAS_PROPERTY"
+          }
+        ]
       }],
       properties: PROPS.split(","),
       limit: 100,
@@ -64,7 +70,20 @@ async function fetchAllDeals() {
     if(!data.paging?.next?.after) break;
     after = data.paging.next.after;
   }
-  return deals;
+
+  // Runtime safety: drop anything that slipped through without closedwon
+  const stageCounts = {};
+  deals.forEach(d => {
+    const s = d.properties?.dealstage || "unknown";
+    stageCounts[s] = (stageCounts[s] || 0) + 1;
+  });
+  console.log("[hubspot/sync] dealstage breakdown before filter:", stageCounts);
+
+  const filtered = deals.filter(d => d.properties?.dealstage === "closedwon");
+  if(filtered.length !== deals.length) {
+    console.warn(`[hubspot/sync] Dropped ${deals.length - filtered.length} non-closedwon deals`);
+  }
+  return filtered;
 }
 
 function formatDate(ts) {

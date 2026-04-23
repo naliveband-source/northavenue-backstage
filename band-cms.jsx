@@ -918,12 +918,28 @@ function AdminView({users,setUsers,T}){
 // ── PROFILE ────────────────────────────────────────────────────────────────
 // ── AVATAR EDITOR ─────────────────────────────────────────────────────────
 function AvatarEditor({src,onSave,onClose,T}){
+  const previewSize=300;
   const [zoom,setZoom]=useState(1);
   const [pos,setPos]=useState({x:0,y:0});
   const [dragging,setDragging]=useState(false);
+  const [imgSize,setImgSize]=useState({w:0,h:0});
   const dragStart=useRef({x:0,y:0,px:0,py:0});
   const imgRef=useRef();
   const canvasRef=useRef();
+
+  // Base scale = "fit" (whole image visible at zoom 1)
+  const baseScale=imgSize.w&&imgSize.h?Math.min(previewSize/imgSize.w,previewSize/imgSize.h):1;
+  const currentScale=baseScale*zoom;
+  const drawW=imgSize.w*currentScale;
+  const drawH=imgSize.h*currentScale;
+
+  const onImgLoad=()=>{
+    if(imgRef.current){
+      setImgSize({w:imgRef.current.naturalWidth,h:imgRef.current.naturalHeight});
+      setPos({x:0,y:0});
+      setZoom(1);
+    }
+  };
 
   const onMouseDown=e=>{
     setDragging(true);
@@ -959,15 +975,11 @@ function AvatarEditor({src,onSave,onClose,T}){
     canvas.width=size;canvas.height=size;
     const ctx=canvas.getContext("2d");
     const img=imgRef.current;
-    const natW=img.naturalWidth;
-    const natH=img.naturalHeight;
-    const previewSize=300;
-    const imgScale=Math.max(previewSize/natW,previewSize/natH)*zoom;
-    const drawW=natW*imgScale;
-    const drawH=natH*imgScale;
-    // pos.x/y is offset in preview pixels; center at previewSize/2
     const cx=previewSize/2+pos.x;
     const cy=previewSize/2+pos.y;
+    // Fill background in case image doesn't cover full circle
+    ctx.fillStyle="#181719";
+    ctx.fillRect(0,0,size,size);
     ctx.save();
     ctx.beginPath();
     ctx.arc(size/2,size/2,size/2,0,Math.PI*2);
@@ -981,20 +993,21 @@ function AvatarEditor({src,onSave,onClose,T}){
   return(<div style={{position:"fixed",inset:0,background:"#000d",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={onClose}>
     <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:16,padding:24,maxWidth:380,width:"100%"}} onClick={e=>e.stopPropagation()}>
       <div style={{fontSize:11,color:T.orange,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:16}}>TILPAS PROFILBILLEDE</div>
-      <div style={{position:"relative",width:300,height:300,margin:"0 auto 16px",background:T.black,borderRadius:12,overflow:"hidden",cursor:dragging?"grabbing":"grab",userSelect:"none"}}
+      <div style={{position:"relative",width:previewSize,height:previewSize,margin:"0 auto 16px",background:T.black,borderRadius:12,overflow:"hidden",cursor:dragging?"grabbing":"grab",userSelect:"none"}}
         onMouseDown={onMouseDown} onTouchStart={onMouseDown}>
-        <img ref={imgRef} src={src} alt=""
-          style={{position:"absolute",left:"50%",top:"50%",transform:`translate(calc(-50% + ${pos.x}px),calc(-50% + ${pos.y}px)) scale(${zoom})`,maxWidth:"none",minWidth:"100%",minHeight:"100%",pointerEvents:"none"}}
+        <img ref={imgRef} src={src} alt="" onLoad={onImgLoad}
+          style={{position:"absolute",left:"50%",top:"50%",width:drawW?`${drawW}px`:"auto",height:drawH?`${drawH}px`:"auto",transform:`translate(calc(-50% + ${pos.x}px),calc(-50% + ${pos.y}px))`,pointerEvents:"none",maxWidth:"none"}}
           draggable={false}/>
-        {/* Circle overlay */}
         <div style={{position:"absolute",inset:0,pointerEvents:"none",background:"radial-gradient(circle,transparent 149px,#000000cc 150px)"}}/>
       </div>
       <div style={{marginBottom:16}}>
-        <div style={{fontSize:9,color:T.muted,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",marginBottom:8}}>ZOOM</div>
-        <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={e=>setZoom(parseFloat(e.target.value))}
+        <div style={{fontSize:9,color:T.muted,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",marginBottom:8,display:"flex",justifyContent:"space-between"}}>
+          <span>ZOOM</span><span>{(zoom*100|0)}%</span>
+        </div>
+        <input type="range" min="0.5" max="4" step="0.01" value={zoom} onChange={e=>setZoom(parseFloat(e.target.value))}
           style={{width:"100%",accentColor:T.orange}}/>
       </div>
-      <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",textAlign:"center",marginBottom:16,lineHeight:1.6}}>Træk billedet for at flytte · skub zoom-slideren for at zoome</div>
+      <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",textAlign:"center",marginBottom:16,lineHeight:1.6}}>Træk for at flytte · skub slideren for at zoome</div>
       <canvas ref={canvasRef} style={{display:"none"}}/>
       <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
         <Btn onClick={onClose} color={T.muted} small>ANNULLER</Btn>
