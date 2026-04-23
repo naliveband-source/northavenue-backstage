@@ -1,4 +1,5 @@
 "use client";
+// v2.1 — Design C
 import { useState, useMemo, useRef, useEffect } from "react";
 
 // ── Responsive hook ────────────────────────────────────────────────────────
