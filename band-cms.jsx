@@ -407,6 +407,10 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   const isTablet=winW<1400;
   const visibleBookings=isSub?bookings.filter(b=>b.substituteIds.includes(currentUser.musicianId)):bookings;
   const filtered=useMemo(()=>visibleBookings.filter(b=>getYear(b.date)===yr),[visibleBookings,yr]);
+  const [filter,setFilter]=useState("all");
+  const pastCount=filtered.filter(b=>isPast(b.date)).length;
+  const upcomingCount=filtered.length-pastCount;
+  const visible=filtered.filter(b=>{if(filter==="upcoming")return !isPast(b.date);if(filter==="past")return isPast(b.date);return true;});
 
   const memberUsers=users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias");
   const subUsers=users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId);
@@ -437,9 +441,19 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
       </div>))}
     </div>
 
+    <div style={{display:"flex",gap:4,marginBottom:16,background:T.dim,padding:4,borderRadius:10,width:"fit-content",border:`1px solid ${T.border}`}}>
+      {[{id:"all",label:`ALLE · ${filtered.length}`},{id:"upcoming",label:`KOMMENDE · ${upcomingCount}`},{id:"past",label:`AFHOLDTE · ${pastCount}`}].map(f=>{
+        const active=filter===f.id;
+        return(<button key={f.id} onClick={()=>setFilter(f.id)}
+          style={{padding:"8px 18px",background:active?T.orange:"transparent",border:"none",borderRadius:7,color:active?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,letterSpacing:"0.06em",transition:"all .15s"}}>
+          {f.label}
+        </button>);
+      })}
+    </div>
+
     {/* Card view — single column all screen sizes */}
     <div style={{display:"flex",flexDirection:"column",gap:6}}>
-      {filtered.map(b=>{
+      {visible.map(b=>{
         const past=isPast(b.date);
         const mp=calcMusicianPay(b.bandPay);
         const sp=calcSubPay(mp);
@@ -491,7 +505,7 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
           </div>
         );
       })}
-      {filtered.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
+      {visible.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
     </div>
 
     {detailBooking&&<JobDetailPopup booking={detailBooking} users={users} isSub={isSub} T={T} onClose={()=>setDetailBooking(null)}/>}
@@ -515,6 +529,10 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
   const [confirmDel,setConfirmDel]=useState(null);
 
   const managerBookings=useMemo(()=>(aliasData[selManager]||[]).filter(b=>getYear(b.date)===yr).sort((a,b)=>new Date(a.date)-new Date(b.date)),[aliasData,selManager,yr]);
+  const [filter,setFilter]=useState("all");
+  const pastCount=managerBookings.filter(b=>isPast(b.date)).length;
+  const upcomingCount=managerBookings.length-pastCount;
+  const visible=managerBookings.filter(b=>{if(filter==="upcoming")return !isPast(b.date);if(filter==="past")return isPast(b.date);return true;});
   const totalPay=managerBookings.reduce((s,b)=>s+b.bandPay,0);
   const totalBook=managerBookings.reduce((s,b)=>s+(b.bookingFee||0),0);
 
@@ -554,9 +572,19 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
       ))}
     </div>
 
+    <div style={{display:"flex",gap:4,marginBottom:16,background:T.dim,padding:4,borderRadius:10,width:"fit-content",border:`1px solid ${T.border}`}}>
+      {[{id:"all",label:`ALLE · ${managerBookings.length}`},{id:"upcoming",label:`KOMMENDE · ${upcomingCount}`},{id:"past",label:`AFHOLDTE · ${pastCount}`}].map(f=>{
+        const active=filter===f.id;
+        return(<button key={f.id} onClick={()=>setFilter(f.id)}
+          style={{padding:"8px 18px",background:active?T.orange:"transparent",border:"none",borderRadius:7,color:active?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,letterSpacing:"0.06em",transition:"all .15s"}}>
+          {f.label}
+        </button>);
+      })}
+    </div>
+
     {/* Alias cards — Design C */}
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
-      {managerBookings.map(b=>{
+      {visible.map(b=>{
         const past=isPast(b.date);
         const weekday=new Date(b.date).toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
         const dateStr=new Date(b.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"});
@@ -586,7 +614,7 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
           </div>
         );
       })}
-      {managerBookings.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
+      {visible.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
     </div>
 
     {detailBooking&&<AliasDetailPopup booking={detailBooking} T={T} onClose={()=>setDetailBooking(null)}/>}
@@ -640,6 +668,9 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
   const [addTarget,setAddTarget]=useState(null);
   const [na,setNa]=useState("");const [nn,setNn]=useState("");const [nd,setNd]=useState("");
   const [confirmRemove,setConfirmRemove]=useState(null);
+  const winW=useWindowWidth();
+  const isMobile=winW<768;
+  const [payTab,setPayTab]=useState("jobs");
 
   const memberUsers=users.filter(u=>u.subType==="member"&&u.musicianId);
   const ownerUsers =users.filter(u=>u.subType==="owner"&&u.musicianId);
@@ -677,7 +708,7 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
       const isOwner=u.subType==="owner";const isSubU=hasVikar(u)&&!u.isAdmin;
       const jobs=jobsForYear.filter(b=>isSubU?b.substituteIds?.includes(u.musicianId):b.memberIds.includes(u.musicianId));
       const earned=isOwner?jobs.length*OWNER_PAY:isSubU?jobs.reduce((s,b)=>s+calcSubPay(calcMusicianPay(b.bandPay)),0):jobs.reduce((s,b)=>s+calcMusicianPay(b.bandPay),0);
-      const myPay=(payments[u.musicianId]||[]).filter(p=>getYear(p.date)===yr);
+      const myPay=(payments[u.musicianId]||[]).filter(p=>getYear(p.date)===yr).sort((a,b)=>new Date(a.date)-new Date(b.date));
       const paid=myPay.reduce((s,p)=>s+p.amount,0);
       const balance=earned+paid;const color=userColor(u);
       return(<div key={u.id} style={{marginBottom:24}}>
@@ -698,8 +729,12 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
             </div>
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div>
+        {isMobile&&(<div style={{display:"flex",gap:6,marginBottom:8}}>
+          <button onClick={()=>setPayTab("jobs")} style={{flex:1,padding:"9px",background:payTab==="jobs"?T.orange:"transparent",border:`1px solid ${payTab==="jobs"?T.orange:T.border}`,borderRadius:8,color:payTab==="jobs"?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700}}>JOBS · {jobs.length}</button>
+          <button onClick={()=>setPayTab("posts")} style={{flex:1,padding:"9px",background:payTab==="posts"?T.orange:"transparent",border:`1px solid ${payTab==="posts"?T.orange:T.border}`,borderRadius:8,color:payTab==="posts"?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700}}>POSTER · {myPay.length}</button>
+        </div>)}
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
+          {(!isMobile||payTab==="jobs")&&<div>
             <div style={{fontSize:9,color:T.subText,letterSpacing:"0.12em",marginBottom:8,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>JOBS · {jobs.length}</div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {jobs.map(b=>{const mp=calcMusicianPay(b.bandPay);const pay=isOwner?OWNER_PAY:isSubU?calcSubPay(mp):mp;
@@ -710,8 +745,8 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
               })}
               {jobs.length===0&&<div style={{background:T.dim,borderRadius:8,padding:"16px 14px",textAlign:"center",color:T.muted,fontSize:12,fontFamily:"'Poppins',sans-serif"}}>Ingen afholdte jobs</div>}
             </div>
-          </div>
-          <div>
+          </div>}
+          {(!isMobile||payTab==="posts")&&<div>
             <div style={{fontSize:9,color:T.subText,letterSpacing:"0.12em",marginBottom:8,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>POSTER</div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {myPay.map(p=>(<div key={p.id} style={{background:T.dim,borderRadius:8,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -723,7 +758,7 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
               </div>))}
               {myPay.length===0&&<div style={{background:T.dim,borderRadius:8,padding:"16px 14px",textAlign:"center",color:T.muted,fontSize:12,fontFamily:"'Poppins',sans-serif"}}>Ingen poster</div>}
             </div>
-          </div>
+          </div>}
         </div>
       </div>);
     })}
