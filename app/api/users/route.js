@@ -31,7 +31,9 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const { id } = await req.json();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
     await sql`UPDATE users SET archived = true WHERE id = ${id}`;
     return NextResponse.json({ ok: true });
   } catch (e) {

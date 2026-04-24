@@ -655,7 +655,7 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
     setPayments(prev=>({...prev,[addTarget]:[...(prev[addTarget]||[]),e2]}));
     setNa("");setNn("");setNd("");setShowAdd(false);setAddTarget(null);
   };
-  const removePay=(mid,pid)=>{setPayments(prev=>({...prev,[mid]:(prev[mid]||[]).filter(p=>p.id!==pid)}));setConfirmRemove(null);};
+  const removePay=async(mid,pid)=>{await fetch(`/api/payments?id=${pid}`,{method:"DELETE"}).catch(()=>{});setPayments(prev=>({...prev,[mid]:(prev[mid]||[]).filter(p=>p.id!==pid)}));setConfirmRemove(null);};
   const tabSt=active=>({padding:"10px 20px",background:active?T.orange:"transparent",border:`1px solid ${active?T.orange:T.border}`,borderRadius:10,color:active?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,letterSpacing:"0.08em",fontWeight:active?700:400,transition:"all .15s"});
 
   return(<div>
@@ -881,7 +881,7 @@ function AdminView({users,setUsers,T}){
       }} color={T.orange}>{syncState.loading?"SYNKRONISERER...":"SYNKRONISER NU →"}</Btn>
       {syncState.msg&&<div style={{marginTop:12,fontSize:12,color:syncState.msg.err?T.red:T.green,fontFamily:"'Poppins',sans-serif"}}>{syncState.msg.text}</div>}
     </div>
-    {confirmRemoveUser&&<ConfirmModal message={`Er du sikker på at du vil fjerne "${confirmRemoveUser.first} ${confirmRemoveUser.last}"? Handlingen kan ikke fortrydes.`} onConfirm={()=>{setUsers(prev=>prev.filter(x=>x.id!==confirmRemoveUser.id));setConfirmRemoveUser(null);}} onCancel={()=>setConfirmRemoveUser(null)} T={T}/>}
+    {confirmRemoveUser&&<ConfirmModal message={`Er du sikker på at du vil fjerne "${confirmRemoveUser.first} ${confirmRemoveUser.last}"? Handlingen kan ikke fortrydes.`} onConfirm={async()=>{await fetch(`/api/users?id=${confirmRemoveUser.id}`,{method:"DELETE"}).catch(()=>{});setUsers(prev=>prev.filter(x=>x.id!==confirmRemoveUser.id));setConfirmRemoveUser(null);}} onCancel={()=>setConfirmRemoveUser(null)} T={T}/>}
     {editing!==null&&(<Modal title={editing==="new"?"OPRET BRUGER":"REDIGER BRUGER"} onClose={()=>setEditing(null)} T={T} wide>
       <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:20}}>
         <div style={{cursor:"pointer",flexShrink:0}} onClick={()=>avatarRef.current.click()}>
@@ -1174,7 +1174,7 @@ export default function App(){
         ]);
 
         // Map users from DB format
-        if(Array.isArray(u)&&u.length>0){
+        if(Array.isArray(u)){
           setUsers(u.map(x=>({
             ...x,
             subType:x.sub_type,
