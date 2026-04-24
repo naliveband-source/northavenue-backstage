@@ -118,32 +118,32 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
   const dayNum=dateObj.getDate();
   const monthYear=dateObj.toLocaleDateString("da-DK",{month:"short",year:"numeric"}).toUpperCase();
 
-  const Fld=({label,value,span=1,color="#F8F5E6"})=>(
+  const Fld=({label,value,span=1,color=T.white})=>(
     <div style={{gridColumn:`span ${span}`}}>
-      <div style={{fontSize:8,color:"#7A7470",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
+      <div style={{fontSize:8,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
       <div style={{fontSize:11,color,fontWeight:700,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
     </div>
   );
 
   const MusicianChips=()=>(<>
-    <div style={{fontSize:9,color:"#7A7470",letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8}}>MUSIKERE</div>
+    <div style={{fontSize:9,color:T.subText,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8}}>MUSIKERE</div>
     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:booking.substituteIds?.length>0?10:0}}>
       {memberUsers.map(u=>{
         const isIn=booking.memberIds.includes(u.musicianId);const c=userColor(u);
-        return(<div key={u.id} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:isIn?c+"18":"#1E1C1D",border:`1px solid ${isIn?c+"44":"#2E2B2C"}`,borderRadius:20,opacity:isIn?1:0.45}}>
+        return(<div key={u.id} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:isIn?c+"18":T.dim,border:`1px solid ${isIn?c+"44":T.border}`,borderRadius:20,opacity:isIn?1:0.45}}>
           <span style={{width:16,height:16,background:c+"22",border:`1px solid ${c}`,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
-          <span style={{fontSize:11,color:isIn?"#F8F5E6":"#7A7470",fontFamily:"'Poppins',sans-serif",fontWeight:isIn?600:400}}>{u.first}</span>
+          <span style={{fontSize:11,color:isIn?T.white:T.subText,fontFamily:"'Poppins',sans-serif",fontWeight:isIn?600:400}}>{u.first}</span>
         </div>);
       })}
     </div>
     {booking.substituteIds?.length>0&&(<>
-      <div style={{fontSize:9,color:"#7A7470",letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8,marginTop:6}}>VIKARER</div>
+      <div style={{fontSize:9,color:T.subText,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8,marginTop:6}}>VIKARER</div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
         {booking.substituteIds.map(mid=>{
           const u=users.find(x=>x.musicianId===mid);if(!u)return null;const c=userColor(u);
           return(<div key={mid} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:c+"18",border:`1px solid ${c+"44"}`,borderRadius:20}}>
             <span style={{width:16,height:16,background:c+"22",border:`1px solid ${c}`,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
-            <span style={{fontSize:11,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{u.first}</span>
+            <span style={{fontSize:11,color:T.white,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{u.first}</span>
             <span style={{fontSize:8,color:T.orange,background:T.orange+"18",padding:"1px 5px",borderRadius:3,fontFamily:"'Poppins',sans-serif",fontWeight:700}}>VIKAR</span>
           </div>);
         })}
@@ -154,7 +154,7 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
   if(!isMobile){
     return typeof document!=="undefined"?createPortal(
       <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
-        <div style={{background:"#1E1C1D",border:"1px solid #2E2B2C",borderRadius:16,overflow:"hidden",display:"flex",width:600,maxWidth:"94vw",maxHeight:"90vh",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:16,overflow:"hidden",display:"flex",width:600,maxWidth:"94vw",maxHeight:"90vh",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
           {/* Stub */}
           <div style={{width:120,background:stubColor,padding:"24px 18px",display:"flex",flexDirection:"column",justifyContent:"space-between",flexShrink:0}}>
             <div>
@@ -169,27 +169,27 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
             </div>
           </div>
           {/* Perforation */}
-          <div style={{width:2,background:"#181719",display:"flex",flexDirection:"column",justifyContent:"space-around",alignItems:"center",flexShrink:0}}>
-            {[0,1,2,3,4].map(i=><div key={i} style={{width:8,height:8,background:"#2A2628",border:"1px solid #2E2B2C",borderRadius:"50%"}}/>)}
+          <div style={{width:2,background:T.black,display:"flex",flexDirection:"column",justifyContent:"space-around",alignItems:"center",flexShrink:0}}>
+            {[0,1,2,3,4].map(i=><div key={i} style={{width:8,height:8,background:T.black,border:`1px solid ${T.border}`,borderRadius:"50%"}}/>)}
           </div>
           {/* Content */}
           <div style={{flex:1,padding:"20px 22px",position:"relative",overflowY:"auto"}}>
-            <button onClick={onClose} style={{position:"absolute",top:14,right:16,background:"none",border:"none",color:"#7A7470",cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
+            <button onClick={onClose} style={{position:"absolute",top:14,right:16,background:"none",border:"none",color:T.subText,cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
             <div style={{fontSize:9,color:stubColor,letterSpacing:"0.14em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NORTH AVENUE</div>
-            <div style={{fontSize:21,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",lineHeight:1.1,paddingRight:28,marginBottom:4}}>{booking.type}</div>
-            <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
-            <div style={{display:"grid",gridTemplateColumns:isAdmin?"repeat(3,1fr)":"repeat(4,1fr)",gap:"10px 16px",borderBottom:"1px dashed #2E2B2C",paddingBottom:14,marginBottom:14}}>
+            <div style={{fontSize:21,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",lineHeight:1.1,paddingRight:28,marginBottom:4}}>{booking.type}</div>
+            <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
+            <div style={{display:"grid",gridTemplateColumns:isAdmin?"repeat(3,1fr)":"repeat(4,1fr)",gap:"10px 16px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
               {!isAdmin&&<Fld label="AFGANG" value={booking.departure}/>}
               <Fld label="ANKOMST" value={booking.arrival}/>
               <Fld label="SPILLETID" value={booking.playTime}/>
               <Fld label="SÆT" value={booking.sets}/>
             </div>
-            <div style={{borderBottom:"1px dashed #2E2B2C",paddingBottom:14,marginBottom:14}}>
+            <div style={{borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
               <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
             </div>
-            {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:"#2A2628",borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
-              <div style={{fontSize:8,color:"#7A7470",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
-              <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
+            {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
+              <div style={{fontSize:8,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
+              <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
             </div>}
             <MusicianChips/>
           </div>
@@ -201,7 +201,7 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
 
   return typeof document!=="undefined"?createPortal(
     <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"flex-end"}} onClick={onClose}>
-      <div style={{background:"#1E1C1D",border:"1px solid #2E2B2C",borderRadius:"16px 16px 0 0",width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:"16px 16px 0 0",width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{background:stubColor,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
             <div style={{fontSize:9,color:"#F8F5E6",letterSpacing:"0.12em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.85,marginBottom:3}}>{weekday} · {dayNum}. {monthYear}</div>
@@ -212,11 +212,11 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
             <div style={{fontSize:18,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{fmt(stubAmount)} kr.</div>
           </div>
         </div>
-        <div style={{borderTop:"2px dashed #181719"}}/>
+        <div style={{borderTop:`2px dashed ${T.black}`}}/>
         <div style={{padding:"16px 18px 28px",position:"relative"}}>
-          <button onClick={onClose} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:"#7A7470",cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
+          <button onClick={onClose} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:T.subText,cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
           <div style={{fontSize:9,color:stubColor,letterSpacing:"0.14em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NORTH AVENUE</div>
-          <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
+          <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:14}}>
             {!isAdmin&&<Fld label="AFGANG" value={booking.departure}/>}
             <Fld label="ANKOMST" value={booking.arrival}/>
@@ -224,7 +224,7 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
             <Fld label="SÆT" value={booking.sets}/>
             <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" span={2}/>
           </div>
-          {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:"#2A2628",borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
+          {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
           <MusicianChips/>
         </div>
       </div>
@@ -245,9 +245,9 @@ function AliasDetailPopup({booking,T,onClose}){
     ?<span><span style={{color:"#1E7B5B"}}>●</span>{" "}Ja</span>
     :<span><span style={{color:"#C04040"}}>●</span>{" "}Nej</span>;
 
-  const Fld=({label,value,span=1,color="#F8F5E6"})=>(
+  const Fld=({label,value,span=1,color=T.white})=>(
     <div style={{gridColumn:`span ${span}`}}>
-      <div style={{fontSize:8,color:"#7A7470",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
+      <div style={{fontSize:8,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
       <div style={{fontSize:11,color,fontWeight:700,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
     </div>
   );
@@ -255,7 +255,7 @@ function AliasDetailPopup({booking,T,onClose}){
   if(!isMobile){
     return typeof document!=="undefined"?createPortal(
       <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
-        <div style={{background:"#1E1C1D",border:"1px solid #2E2B2C",borderRadius:16,overflow:"hidden",display:"flex",width:620,maxWidth:"94vw",maxHeight:"90vh",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:16,overflow:"hidden",display:"flex",width:620,maxWidth:"94vw",maxHeight:"90vh",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
           {/* Stub */}
           <div style={{width:120,background:stubColor,padding:"24px 18px",display:"flex",flexDirection:"column",justifyContent:"space-between",flexShrink:0}}>
             <div>
@@ -270,32 +270,32 @@ function AliasDetailPopup({booking,T,onClose}){
             </div>
           </div>
           {/* Perforation */}
-          <div style={{width:2,background:"#181719",display:"flex",flexDirection:"column",justifyContent:"space-around",alignItems:"center",flexShrink:0}}>
-            {[0,1,2,3,4].map(i=><div key={i} style={{width:8,height:8,background:"#2A2628",border:"1px solid #2E2B2C",borderRadius:"50%"}}/>)}
+          <div style={{width:2,background:T.black,display:"flex",flexDirection:"column",justifyContent:"space-around",alignItems:"center",flexShrink:0}}>
+            {[0,1,2,3,4].map(i=><div key={i} style={{width:8,height:8,background:T.black,border:`1px solid ${T.border}`,borderRadius:"50%"}}/>)}
           </div>
           {/* Content */}
           <div style={{flex:1,padding:"20px 22px",position:"relative",overflowY:"auto"}}>
-            <button onClick={onClose} style={{position:"absolute",top:14,right:16,background:"none",border:"none",color:"#7A7470",cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
+            <button onClick={onClose} style={{position:"absolute",top:14,right:16,background:"none",border:"none",color:T.subText,cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
             <div style={{fontSize:9,color:stubColor,letterSpacing:"0.14em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NA ALIAS</div>
-            <div style={{fontSize:21,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",lineHeight:1.1,paddingRight:28,marginBottom:4}}>{booking.type}</div>
-            <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px 16px",borderBottom:"1px dashed #2E2B2C",paddingBottom:14,marginBottom:14}}>
+            <div style={{fontSize:21,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",lineHeight:1.1,paddingRight:28,marginBottom:4}}>{booking.type}</div>
+            <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px 16px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
               <Fld label="ANKOMST" value={booking.arrival}/>
               <Fld label="SPILLETID" value={booking.playTime}/>
               <Fld label="SÆT" value={booking.sets}/>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px 16px",borderBottom:"1px dashed #2E2B2C",paddingBottom:14,marginBottom:14}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px 16px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
               <Fld label="BEMANDING" value={booking.musicians?`${booking.musicians} musikere`:null}/>
               <Fld label="BIL + GEAR" value={carGearVal}/>
               <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"10px 16px",borderBottom:"1px dashed #2E2B2C",paddingBottom:14,marginBottom:14}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"10px 16px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
               <Fld label="KONTAKTPERSON" value={booking.contact}/>
               <Fld label="TELEFON" value={booking.phone}/>
             </div>
-            {booking.notes&&<div style={{padding:"8px 10px",background:"#2A2628",borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
-              <div style={{fontSize:8,color:"#7A7470",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
-              <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
+            {booking.notes&&<div style={{padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
+              <div style={{fontSize:8,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
+              <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
             </div>}
           </div>
         </div>
@@ -306,7 +306,7 @@ function AliasDetailPopup({booking,T,onClose}){
 
   return typeof document!=="undefined"?createPortal(
     <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"flex-end"}} onClick={onClose}>
-      <div style={{background:"#1E1C1D",border:"1px solid #2E2B2C",borderRadius:"16px 16px 0 0",width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:"16px 16px 0 0",width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{background:stubColor,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
             <div style={{fontSize:9,color:"#F8F5E6",letterSpacing:"0.12em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.85,marginBottom:3}}>{weekday} · {dayNum}. {monthYear}</div>
@@ -317,11 +317,11 @@ function AliasDetailPopup({booking,T,onClose}){
             <div style={{fontSize:18,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{fmt(booking.bandPay)} kr.</div>
           </div>
         </div>
-        <div style={{borderTop:"2px dashed #181719"}}/>
+        <div style={{borderTop:`2px dashed ${T.black}`}}/>
         <div style={{padding:"16px 18px 28px",position:"relative"}}>
-          <button onClick={onClose} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:"#7A7470",cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
+          <button onClick={onClose} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:T.subText,cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
           <div style={{fontSize:9,color:stubColor,letterSpacing:"0.14em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NA ALIAS</div>
-          <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
+          <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:14}}>
             <Fld label="ANKOMST" value={booking.arrival}/>
             <Fld label="SPILLETID" value={booking.playTime}/>
@@ -332,7 +332,7 @@ function AliasDetailPopup({booking,T,onClose}){
             <Fld label="KONTAKTPERSON" value={booking.contact} span={2}/>
             <Fld label="TELEFON" value={booking.phone}/>
           </div>
-          {booking.notes&&<div style={{padding:"8px 10px",background:"#2A2628",borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
+          {booking.notes&&<div style={{padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
         </div>
       </div>
     </div>,
