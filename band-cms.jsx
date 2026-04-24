@@ -184,7 +184,8 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
               <Fld label="SPILLETID" value={booking.playTime}/>
               <Fld label="SÆT" value={booking.sets}/>
             </div>
-            <div style={{borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
+            <div style={{display:"grid",gridTemplateColumns:isAdmin?"1fr 1fr":"1fr",gap:"10px 14px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
+              {isAdmin&&<Fld label="MUSIKER LØN" value={`${fmt(mp)} kr.`} color={stubColor}/>}
               <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
             </div>
             {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
@@ -222,6 +223,7 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
             <Fld label="ANKOMST" value={booking.arrival}/>
             <Fld label="SPILLETID" value={booking.playTime}/>
             <Fld label="SÆT" value={booking.sets}/>
+            {isAdmin&&<Fld label="MUSIKER LØN" value={`${fmt(mp)} kr.`} color={stubColor}/>}
             <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" span={2}/>
           </div>
           {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
