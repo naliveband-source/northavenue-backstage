@@ -104,120 +104,240 @@ function ConfirmModal({message,onConfirm,onCancel,T}){
   );
 }
 
-// ── Job Detail Popup (read-only) ───────────────────────────────────────────
-function JobDetailPopup({booking,users,isSub,T,onClose}){
-  const mp = calcMusicianPay(booking.bandPay);
-  const sp = calcSubPay(mp);
-  const memberUsers = users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias");
-  const subUsers    = users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId);
-  const past = isPast(booking.date);
-  const oA = "#D4622A";
+// ── Job Detail Popup (ticket style) ───────────────────────────────────────
+function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
+  const isMobile=useWindowWidth()<768;
+  const mp=calcMusicianPay(booking.bandPay);
+  const sp=calcSubPay(mp);
+  const memberUsers=users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias");
+  const stubColor=PAY_BRACKETS.find(x=>x.pay===mp)?.color||T.orange;
+  const stubAmount=isAdmin?booking.bandPay:isSub?sp:mp;
+  const stubLabel=isAdmin?"BELØB":"DIN LØN";
+  const dateObj=new Date(booking.date);
+  const weekday=dateObj.toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
+  const dayNum=dateObj.getDate();
+  const monthYear=dateObj.toLocaleDateString("da-DK",{month:"short",year:"numeric"}).toUpperCase();
 
-  const Row = ({label,value,accent=false})=>(
-    <div style={{display:"flex",gap:16,padding:"9px 0",borderBottom:`1px solid ${T.border}`}}>
-      <span style={{fontSize:10,color:T.muted,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",minWidth:100,flexShrink:0}}>{label}</span>
-      <span style={{fontSize:13,color:accent?T.orange:T.cardText,fontWeight:accent?700:500,fontFamily:"'Poppins',sans-serif"}}>{value||"–"}</span>
+  const Fld=({label,value,span=1,color="#F8F5E6"})=>(
+    <div style={{gridColumn:`span ${span}`}}>
+      <div style={{fontSize:8,color:"#7A7470",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
+      <div style={{fontSize:11,color,fontWeight:700,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
     </div>
   );
 
-  return(
-    <div style={{position:"fixed",inset:0,background:"#000d",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
-      <div style={{background:T.dim,border:`1px solid ${past?oA+"55":T.border}`,width:560,maxWidth:"96vw",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
-        {/* Header */}
-        <div style={{padding:"20px 24px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12}}>
-          <div style={{flex:1}}>
-            {past&&<div style={{fontSize:8,color:oA,letterSpacing:"0.12em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:4}}>AFHOLDT</div>}
-            <div style={{fontSize:20,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",lineHeight:1.1}}>{booking.type}</div>
-            <div style={{fontSize:13,color:T.muted,marginTop:4,fontFamily:"'Poppins',sans-serif"}}>{fmtDate(booking.date)}</div>
-          </div>
-          <button onClick={onClose} style={{background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:22,lineHeight:1,padding:"0 4px",flexShrink:0}}>×</button>
-        </div>
+  const MusicianChips=()=>(<>
+    <div style={{fontSize:9,color:"#7A7470",letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8}}>MUSIKERE</div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:booking.substituteIds?.length>0?10:0}}>
+      {memberUsers.map(u=>{
+        const isIn=booking.memberIds.includes(u.musicianId);const c=userColor(u);
+        return(<div key={u.id} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:isIn?c+"18":"#1E1C1D",border:`1px solid ${isIn?c+"44":"#2E2B2C"}`,borderRadius:20,opacity:isIn?1:0.45}}>
+          <span style={{width:16,height:16,background:c+"22",border:`1px solid ${c}`,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
+          <span style={{fontSize:11,color:isIn?"#F8F5E6":"#7A7470",fontFamily:"'Poppins',sans-serif",fontWeight:isIn?600:400}}>{u.first}</span>
+        </div>);
+      })}
+    </div>
+    {booking.substituteIds?.length>0&&(<>
+      <div style={{fontSize:9,color:"#7A7470",letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8,marginTop:6}}>VIKARER</div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        {booking.substituteIds.map(mid=>{
+          const u=users.find(x=>x.musicianId===mid);if(!u)return null;const c=userColor(u);
+          return(<div key={mid} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:c+"18",border:`1px solid ${c+"44"}`,borderRadius:20}}>
+            <span style={{width:16,height:16,background:c+"22",border:`1px solid ${c}`,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
+            <span style={{fontSize:11,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{u.first}</span>
+            <span style={{fontSize:8,color:T.orange,background:T.orange+"18",padding:"1px 5px",borderRadius:3,fontFamily:"'Poppins',sans-serif",fontWeight:700}}>VIKAR</span>
+          </div>);
+        })}
+      </div>
+    </>)}
+  </>);
 
-        {/* Details */}
-        <div style={{padding:"4px 24px 20px"}}>
-          <Row label="BY" value={booking.city}/>
-          <Row label="ADRESSE" value={booking.address}/>
-          <Row label="AFGANG" value={booking.departure}/>
-          <Row label="ANKOMST" value={booking.arrival}/>
-          <Row label="SPILLETID" value={booking.playTime}/>
-          <Row label="SÆT" value={booking.sets}/>
-          <Row label="BOOKER" value={booking.booker}/>
-          <Row label="MUSIKER LØN" value={fmt(isSub?sp:mp)} accent/>
-          {booking.notes&&<Row label="NOTE" value={booking.notes}/>}
-
-          {/* Musikere */}
-          {!isSub&&(<>
-            <div style={{marginTop:16,marginBottom:8,fontSize:9,color:T.muted,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",fontWeight:600}}>MUSIKERE</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {memberUsers.map(u=>{
-                const isIn=booking.memberIds.includes(u.musicianId);
-                const c=userColor(u);
-                return(<div key={u.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:isIn?c+"18":T.black,border:`1px solid ${isIn?c+"44":T.border}`,borderRadius:2,opacity:isIn?1:0.4}}>
-                  <span style={{width:18,height:18,background:c+"22",border:`1px solid ${c}`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
-                  <span style={{fontSize:11,color:isIn?T.white:T.muted,fontFamily:"'Poppins',sans-serif",fontWeight:isIn?600:400}}>{u.first}</span>
-                </div>);
-              })}
+  if(!isMobile){
+    return typeof document!=="undefined"?createPortal(
+      <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
+        <div style={{background:"#1E1C1D",border:"1px solid #2E2B2C",borderRadius:16,overflow:"hidden",display:"flex",width:600,maxWidth:"94vw",maxHeight:"90vh",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
+          {/* Stub */}
+          <div style={{width:120,background:stubColor,padding:"24px 18px",display:"flex",flexDirection:"column",justifyContent:"space-between",flexShrink:0}}>
+            <div>
+              <div style={{fontSize:9,color:"#F8F5E6",letterSpacing:"0.12em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.85,marginBottom:2}}>{weekday}</div>
+              <div style={{fontSize:46,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",lineHeight:1}}>{dayNum}</div>
+              <div style={{fontSize:10,color:"#F8F5E6",letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",opacity:0.9,marginTop:3}}>{monthYear}</div>
             </div>
-            {booking.substituteIds.length>0&&(<>
-              <div style={{marginTop:12,marginBottom:8,fontSize:9,color:T.muted,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",fontWeight:600}}>VIKARER</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {booking.substituteIds.map(mid=>{
-                  const u=users.find(x=>x.musicianId===mid);if(!u)return null;
-                  const c=userColor(u);
-                  return(<div key={mid} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:c+"18",border:`1px solid ${c+"44"}`,borderRadius:2}}>
-                    <span style={{width:18,height:18,background:c+"22",border:`1px solid ${c}`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
-                    <span style={{fontSize:11,color:T.white,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{u.first}</span>
-                    <span style={{fontSize:9,color:c,fontFamily:"'Poppins',sans-serif",fontWeight:700}}>VIKAR</span>
-                  </div>);
-                })}
-              </div>
-            </>)}
-          </>)}
+            <div>
+              <div style={{fontSize:8,color:"#F8F5E6",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.75,marginBottom:3}}>{stubLabel}</div>
+              <div style={{fontSize:17,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{fmt(stubAmount)}</div>
+              <div style={{fontSize:8,color:"#F8F5E6",opacity:0.75,fontFamily:"'Poppins',sans-serif"}}>kr.</div>
+            </div>
+          </div>
+          {/* Perforation */}
+          <div style={{width:2,background:"#181719",display:"flex",flexDirection:"column",justifyContent:"space-around",alignItems:"center",flexShrink:0}}>
+            {[0,1,2,3,4].map(i=><div key={i} style={{width:8,height:8,background:"#2A2628",border:"1px solid #2E2B2C",borderRadius:"50%"}}/>)}
+          </div>
+          {/* Content */}
+          <div style={{flex:1,padding:"20px 22px",position:"relative",overflowY:"auto"}}>
+            <button onClick={onClose} style={{position:"absolute",top:14,right:16,background:"none",border:"none",color:"#7A7470",cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
+            <div style={{fontSize:9,color:stubColor,letterSpacing:"0.14em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NORTH AVENUE</div>
+            <div style={{fontSize:21,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",lineHeight:1.1,paddingRight:28,marginBottom:4}}>{booking.type}</div>
+            <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
+            <div style={{display:"grid",gridTemplateColumns:isAdmin?"repeat(3,1fr)":"repeat(4,1fr)",gap:"10px 16px",borderBottom:"1px dashed #2E2B2C",paddingBottom:14,marginBottom:14}}>
+              {!isAdmin&&<Fld label="AFGANG" value={booking.departure}/>}
+              <Fld label="ANKOMST" value={booking.arrival}/>
+              <Fld label="SPILLETID" value={booking.playTime}/>
+              <Fld label="SÆT" value={booking.sets}/>
+            </div>
+            <div style={{borderBottom:"1px dashed #2E2B2C",paddingBottom:14,marginBottom:14}}>
+              <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
+            </div>
+            {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:"#2A2628",borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
+              <div style={{fontSize:8,color:"#7A7470",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
+              <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
+            </div>}
+            <MusicianChips/>
+          </div>
+        </div>
+      </div>,
+      document.body
+    ):null;
+  }
+
+  return typeof document!=="undefined"?createPortal(
+    <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"flex-end"}} onClick={onClose}>
+      <div style={{background:"#1E1C1D",border:"1px solid #2E2B2C",borderRadius:"16px 16px 0 0",width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:stubColor,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div>
+            <div style={{fontSize:9,color:"#F8F5E6",letterSpacing:"0.12em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.85,marginBottom:3}}>{weekday} · {dayNum}. {monthYear}</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em"}}>{booking.type}</div>
+          </div>
+          <div style={{textAlign:"right",flexShrink:0,marginLeft:12}}>
+            <div style={{fontSize:8,color:"#F8F5E6",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.75,marginBottom:2}}>{stubLabel}</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{fmt(stubAmount)} kr.</div>
+          </div>
+        </div>
+        <div style={{borderTop:"2px dashed #181719"}}/>
+        <div style={{padding:"16px 18px 28px",position:"relative"}}>
+          <button onClick={onClose} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:"#7A7470",cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
+          <div style={{fontSize:9,color:stubColor,letterSpacing:"0.14em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NORTH AVENUE</div>
+          <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:14}}>
+            {!isAdmin&&<Fld label="AFGANG" value={booking.departure}/>}
+            <Fld label="ANKOMST" value={booking.arrival}/>
+            <Fld label="SPILLETID" value={booking.playTime}/>
+            <Fld label="SÆT" value={booking.sets}/>
+            <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" span={2}/>
+          </div>
+          {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:"#2A2628",borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
+          <MusicianChips/>
         </div>
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ):null;
 }
 
-// ── Alias Job Detail Popup ─────────────────────────────────────────────────
+// ── Alias Job Detail Popup (ticket style) ─────────────────────────────────
 function AliasDetailPopup({booking,T,onClose}){
-  const past=isPast(booking.date);
-  const oA="#D4622A";
-  const Row=({label,value,accent=false,green=false})=>(
-    <div style={{display:"flex",gap:16,padding:"9px 0",borderBottom:`1px solid ${T.border}`}}>
-      <span style={{fontSize:10,color:T.muted,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",minWidth:110,flexShrink:0}}>{label}</span>
-      <span style={{fontSize:13,color:accent?T.orange:green?T.green:T.cardText,fontWeight:accent||green?700:500,fontFamily:"'Poppins',sans-serif"}}>{value||"–"}</span>
+  const isMobile=useWindowWidth()<768;
+  const stubColor=T.orange;
+  const dateObj=new Date(booking.date);
+  const weekday=dateObj.toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
+  const dayNum=dateObj.getDate();
+  const monthYear=dateObj.toLocaleDateString("da-DK",{month:"short",year:"numeric"}).toUpperCase();
+  const carGearVal=booking.carGear
+    ?<span><span style={{color:"#1E7B5B"}}>●</span>{" "}Ja</span>
+    :<span><span style={{color:"#C04040"}}>●</span>{" "}Nej</span>;
+
+  const Fld=({label,value,span=1,color="#F8F5E6"})=>(
+    <div style={{gridColumn:`span ${span}`}}>
+      <div style={{fontSize:8,color:"#7A7470",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
+      <div style={{fontSize:11,color,fontWeight:700,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
     </div>
   );
-  return(
-    <div style={{position:"fixed",inset:0,background:"#000d",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
-      <div style={{background:T.dim,border:`1px solid ${past?oA+"55":T.border}`,width:560,maxWidth:"96vw",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
-        <div style={{padding:"20px 24px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12}}>
-          <div style={{flex:1}}>
-            {past&&<div style={{fontSize:8,color:oA,letterSpacing:"0.12em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:4}}>AFHOLDT</div>}
-            <div style={{fontSize:20,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",lineHeight:1.1}}>{booking.type}</div>
-            <div style={{fontSize:13,color:T.muted,marginTop:4,fontFamily:"'Poppins',sans-serif"}}>{fmtDate(booking.date)}</div>
+
+  if(!isMobile){
+    return typeof document!=="undefined"?createPortal(
+      <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
+        <div style={{background:"#1E1C1D",border:"1px solid #2E2B2C",borderRadius:16,overflow:"hidden",display:"flex",width:620,maxWidth:"94vw",maxHeight:"90vh",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
+          {/* Stub */}
+          <div style={{width:120,background:stubColor,padding:"24px 18px",display:"flex",flexDirection:"column",justifyContent:"space-between",flexShrink:0}}>
+            <div>
+              <div style={{fontSize:9,color:"#F8F5E6",letterSpacing:"0.12em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.85,marginBottom:2}}>{weekday}</div>
+              <div style={{fontSize:46,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",lineHeight:1}}>{dayNum}</div>
+              <div style={{fontSize:10,color:"#F8F5E6",letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",opacity:0.9,marginTop:3}}>{monthYear}</div>
+            </div>
+            <div>
+              <div style={{fontSize:8,color:"#F8F5E6",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.75,marginBottom:3}}>BELØB</div>
+              <div style={{fontSize:17,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{fmt(booking.bandPay)}</div>
+              <div style={{fontSize:8,color:"#F8F5E6",opacity:0.75,fontFamily:"'Poppins',sans-serif"}}>kr.</div>
+            </div>
           </div>
-          <button onClick={onClose} style={{background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:22,lineHeight:1,padding:"0 4px",flexShrink:0}}>×</button>
+          {/* Perforation */}
+          <div style={{width:2,background:"#181719",display:"flex",flexDirection:"column",justifyContent:"space-around",alignItems:"center",flexShrink:0}}>
+            {[0,1,2,3,4].map(i=><div key={i} style={{width:8,height:8,background:"#2A2628",border:"1px solid #2E2B2C",borderRadius:"50%"}}/>)}
+          </div>
+          {/* Content */}
+          <div style={{flex:1,padding:"20px 22px",position:"relative",overflowY:"auto"}}>
+            <button onClick={onClose} style={{position:"absolute",top:14,right:16,background:"none",border:"none",color:"#7A7470",cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
+            <div style={{fontSize:9,color:stubColor,letterSpacing:"0.14em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NA ALIAS</div>
+            <div style={{fontSize:21,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",lineHeight:1.1,paddingRight:28,marginBottom:4}}>{booking.type}</div>
+            <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px 16px",borderBottom:"1px dashed #2E2B2C",paddingBottom:14,marginBottom:14}}>
+              <Fld label="ANKOMST" value={booking.arrival}/>
+              <Fld label="SPILLETID" value={booking.playTime}/>
+              <Fld label="SÆT" value={booking.sets}/>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px 16px",borderBottom:"1px dashed #2E2B2C",paddingBottom:14,marginBottom:14}}>
+              <Fld label="BEMANDING" value={booking.musicians?`${booking.musicians} musikere`:null}/>
+              <Fld label="BIL + GEAR" value={carGearVal}/>
+              <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"10px 16px",borderBottom:"1px dashed #2E2B2C",paddingBottom:14,marginBottom:14}}>
+              <Fld label="KONTAKTPERSON" value={booking.contact}/>
+              <Fld label="TELEFON" value={booking.phone}/>
+            </div>
+            {booking.notes&&<div style={{padding:"8px 10px",background:"#2A2628",borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
+              <div style={{fontSize:8,color:"#7A7470",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
+              <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
+            </div>}
+          </div>
         </div>
-        <div style={{padding:"4px 24px 20px"}}>
-          <Row label="BY" value={booking.city}/>
-          <Row label="ADRESSE" value={booking.address}/>
-          <Row label="ANKOMST" value={booking.arrival}/>
-          <Row label="SPILLETID" value={booking.playTime}/>
-          <Row label="SÆT" value={booking.sets}/>
-          <Row label="BEMANDING" value={`${booking.musicians} musikere`}/>
-          <Row label="BELØB" value={fmt(booking.bandPay)} accent/>
-          <Row label="BOOKING" value={fmt(booking.bookingFee||0)}/>
-          <Row label="BIL + GEAR" value={booking.carGear?"Ja":"Nej"} green={booking.carGear}/>
-          <Row label="ARRANGØR" value={booking.contact}/>
-          <Row label="TELEFON" value={booking.phone}/>
-          <Row label="BOOKER" value={booking.booker}/>
-          {booking.notes&&<Row label="NOTE" value={booking.notes}/>}
+      </div>,
+      document.body
+    ):null;
+  }
+
+  return typeof document!=="undefined"?createPortal(
+    <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"flex-end"}} onClick={onClose}>
+      <div style={{background:"#1E1C1D",border:"1px solid #2E2B2C",borderRadius:"16px 16px 0 0",width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:stubColor,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div>
+            <div style={{fontSize:9,color:"#F8F5E6",letterSpacing:"0.12em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.85,marginBottom:3}}>{weekday} · {dayNum}. {monthYear}</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em"}}>{booking.type}</div>
+          </div>
+          <div style={{textAlign:"right",flexShrink:0,marginLeft:12}}>
+            <div style={{fontSize:8,color:"#F8F5E6",letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.75,marginBottom:2}}>BELØB</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{fmt(booking.bandPay)} kr.</div>
+          </div>
+        </div>
+        <div style={{borderTop:"2px dashed #181719"}}/>
+        <div style={{padding:"16px 18px 28px",position:"relative"}}>
+          <button onClick={onClose} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:"#7A7470",cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
+          <div style={{fontSize:9,color:stubColor,letterSpacing:"0.14em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NA ALIAS</div>
+          <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:14}}>
+            <Fld label="ANKOMST" value={booking.arrival}/>
+            <Fld label="SPILLETID" value={booking.playTime}/>
+            <Fld label="SÆT" value={booking.sets}/>
+            <Fld label="BEMANDING" value={booking.musicians?`${booking.musicians} musikere`:null}/>
+            <Fld label="BIL + GEAR" value={carGearVal}/>
+            <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
+            <Fld label="KONTAKTPERSON" value={booking.contact} span={2}/>
+            <Fld label="TELEFON" value={booking.phone}/>
+          </div>
+          {booking.notes&&<div style={{padding:"8px 10px",background:"#2A2628",borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
         </div>
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ):null;
 }
 
 // ── Atoms ──────────────────────────────────────────────────────────────────
@@ -508,7 +628,7 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
       {visible.length===0&&<div style={{padding:"32px 16px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>Ingen jobs dette år</div>}
     </div>
 
-    {detailBooking&&<JobDetailPopup booking={detailBooking} users={users} isSub={isSub} T={T} onClose={()=>setDetailBooking(null)}/>}
+    {detailBooking&&<JobDetailPopup booking={detailBooking} users={users} isSub={isSub} isAdmin={isAdmin} T={T} onClose={()=>setDetailBooking(null)}/>}
     {editingBooking&&<BookingEditModal booking={editingBooking} users={users}
       onSave={u=>{setBookings(prev=>prev.map(b=>b.id===u.id?u:b));setEditingBooking(null);}}
       onDelete={()=>{setBookings(prev=>prev.filter(b=>b.id!==editingBooking.id));setEditingBooking(null);}}
