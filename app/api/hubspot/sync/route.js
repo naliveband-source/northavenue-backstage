@@ -21,7 +21,6 @@ const OWNER_MAP = {
 };
 
 async function fetchOwners() {
-  // Try to fetch additional owners from HubSpot and merge
   try {
     const res = await fetch("https://api.hubapi.com/crm/v3/owners?limit=100", {
       headers: { Authorization: `Bearer ${HS_TOKEN}` }
@@ -126,7 +125,6 @@ export async function GET() {
       const ownerId = String(p.hubspot_owner_id || "");
       const booker = OWNER_MAP[ownerId] || "";
 
-      // Debug: track owner IDs
       if(ownerId) {
         ownerCounts[ownerId] = (ownerCounts[ownerId] || 0) + 1;
         if(!OWNER_MAP[ownerId]) {
@@ -142,6 +140,9 @@ export async function GET() {
       if(isAlias) {
         const managerId = matchAliasManager(p.alias_ansvarlig_1);
         if(!managerId) { skipped++; continue; }
+
+        const existingAlias = await sql`SELECT archived FROM alias_bookings WHERE hs_id = ${hsId}`;
+        if(existingAlias[0]?.archived) { skipped++; continue; }
 
         await sql`
           INSERT INTO alias_bookings (
@@ -185,6 +186,9 @@ export async function GET() {
         aliasCount++;
 
       } else {
+        const existingBooking = await sql`SELECT archived FROM bookings WHERE hs_id = ${hsId}`;
+        if(existingBooking[0]?.archived) { skipped++; continue; }
+
         await sql`
           INSERT INTO bookings (
             hs_id, date, departure, arrival, type, city, address,
@@ -220,11 +224,37 @@ export async function GET() {
       }
     }
 
+    // Auto-archive stale HubSpot rows that are no longer in closedwon
+    const debug = { originalCount, closedwonCount: filteredDeals.length, stageCounts };
+    const currentHsIds = filteredDeals.map(d => "hs_" + String(d.id));
+    if(currentHsIds.length > 0) {
+      const staleBookings = await sql`
+        UPDATE bookings
+        SET archived = true, archived_at = NOW()
+        WHERE hs_id LIKE 'hs_%'
+          AND archived = false
+          AND NOT (hs_id = ANY(${currentHsIds}))
+        RETURNING hs_id
+      `;
+      const staleAlias = await sql`
+        UPDATE alias_bookings
+        SET archived = true, archived_at = NOW()
+        WHERE hs_id LIKE 'hs_%'
+          AND archived = false
+          AND NOT (hs_id = ANY(${currentHsIds}))
+        RETURNING hs_id
+      `;
+      debug.autoArchived = {
+        bookings: staleBookings.length,
+        alias: staleAlias.length
+      };
+    }
+
     return NextResponse.json({
       ok: true,
       total: filteredDeals.length,
       synced: { northAvenue: naCount, alias: aliasCount, skipped },
-      debug: { originalCount, closedwonCount: filteredDeals.length, stageCounts },
+      debug,
       owners: {
         mapped: OWNER_MAP,
         usage: ownerCounts,

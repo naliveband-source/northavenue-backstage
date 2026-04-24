@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const payments = await sql`SELECT * FROM payments ORDER BY date`;
+    const payments = await sql`SELECT * FROM payments WHERE (archived = false OR archived IS NULL) ORDER BY date`;
     return NextResponse.json(payments);
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -29,7 +29,7 @@ export async function POST(req) {
 export async function DELETE(req) {
   try {
     const { id } = await req.json();
-    await sql`DELETE FROM payments WHERE id = ${id}`;
+    await sql`UPDATE payments SET archived = true WHERE id = ${id}`;
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });

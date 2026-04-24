@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const bookings = await sql`SELECT * FROM alias_bookings ORDER BY date`;
+    const bookings = await sql`SELECT * FROM alias_bookings WHERE (archived = false OR archived IS NULL) ORDER BY date`;
     return NextResponse.json(bookings.map(b => ({
       ...b,
       bandPay: b.band_pay,
@@ -40,7 +40,7 @@ export async function POST(req) {
 export async function DELETE(req) {
   try {
     const { id } = await req.json();
-    await sql`DELETE FROM alias_bookings WHERE id = ${id}`;
+    await sql`UPDATE alias_bookings SET archived = true, archived_at = NOW() WHERE id = ${id}`;
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
