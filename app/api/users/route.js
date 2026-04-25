@@ -19,8 +19,8 @@ export async function POST(req) {
   try {
     const b = await req.json();
     const user = await sql`
-      INSERT INTO users (id, email, password, first, last, initials, instrument, phone, role, sub_type, is_admin, tags, theme, musician_id, color)
-      VALUES (${b.id}, ${b.email}, ${b.password}, ${b.first}, ${b.last}, ${b.initials}, ${b.instrument}, ${b.phone}, ${b.role}, ${b.subType}, ${b.isAdmin}, ${JSON.stringify(b.tags||[])}, ${b.theme||'dark'}, ${b.musicianId||null}, ${b.color||''})
+      INSERT INTO users (id, email, password, first, last, initials, instrument, phone, role, sub_type, is_admin, tags, theme, musician_id, color, status)
+      VALUES (${b.id}, ${b.email}, ${b.password}, ${b.first}, ${b.last}, ${b.initials}, ${b.instrument}, ${b.phone}, ${b.role}, ${b.subType}, ${b.isAdmin}, ${JSON.stringify(b.tags||[])}, ${b.theme||'dark'}, ${b.musicianId||null}, ${b.color||''}, ${b.status||'pending'})
       ON CONFLICT (id) DO UPDATE SET
         email=EXCLUDED.email, password=EXCLUDED.password, first=EXCLUDED.first,
         last=EXCLUDED.last, initials=EXCLUDED.initials, instrument=EXCLUDED.instrument,

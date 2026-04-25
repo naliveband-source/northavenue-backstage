@@ -959,6 +959,9 @@ function AdminView({users,setUsers,T}){
   const [confirmRemoveUser,setConfirmRemoveUser]=useState(null);
   const avatarRef=useRef();
   const [syncState,setSyncState]=useState({loading:false,msg:null});
+  const [linkModal,setLinkModal]=useState(null); // { user, link } | null
+  const [inviteLoading,setInviteLoading]=useState(null); // userId being processed
+  const [copied,setCopied]=useState(false);
   const nextMid=()=>Math.max(0,...users.map(u=>u.musicianId||0))+1;
   const deriveSubType=(isAdm,tags)=>{
     if(isAdm)return "owner";
@@ -976,11 +979,27 @@ function AdminView({users,setUsers,T}){
     const role=form.isAdmin?"admin":"musician";
     const needsMid=subType!=="alias"||form.tags.includes("vikar");
     if(editing==="new"){
-      setUsers(prev=>[...prev,{id:`u${Date.now()}`,musicianId:needsMid?nextMid():null,name:form.first,role,subType,isAdmin:form.isAdmin,...form,...(form.password?{}:{password:"changeme"})}]);
+      setUsers(prev=>[...prev,{id:`u${Date.now()}`,musicianId:needsMid?nextMid():null,name:form.first,role,subType,isAdmin:form.isAdmin,status:"pending",...form,...(form.password?{}:{password:"changeme"})}]);
     } else {
       setUsers(prev=>prev.map(u=>u.id===editing.id?{...u,first:form.first,last:form.last,initials:form.initials,instrument:form.instrument,email:form.email,isAdmin:form.isAdmin,role,subType,tags:form.tags,phone:form.phone,name:form.first,avatar:form.avatar,color:form.color,...(form.password?{password:form.password}:{})}:u));
     }
     setEditing(null);
+  };
+  const generateLink=async(u)=>{
+    if(!u.email){alert("Brugeren skal have en email for at generere et invitationslink.");return;}
+    setInviteLoading(u.id);
+    try{
+      const res=await fetch("/api/invitations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,email:u.email})});
+      const data=await res.json();
+      if(data.link){
+        setUsers(prev=>prev.map(x=>x.id===u.id?{...x,status:"invited"}:x));
+        setLinkModal({user:u,link:data.link});
+      }
+    }catch(e){alert("Fejl ved generering af link: "+e.message);}
+    setInviteLoading(null);
+  };
+  const copyLink=(link)=>{
+    navigator.clipboard.writeText(link).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
   };
   const grpDefs=[
     {key:"owner",      label:"ADMIN / EJERE",    color:T.orange, filter:u=>u.subType==="owner"},
@@ -1003,14 +1022,29 @@ function AdminView({users,setUsers,T}){
             {u.avatar?<img src={u.avatar} alt="" style={{width:34,height:34,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
               :<div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>}
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{u.first} {u.last}</div>
+              <div style={{fontSize:13,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                {u.first} {u.last}
+                {u.status==="pending"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.muted+"22",color:T.muted,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>AFVENTER</span>}
+                {u.status==="invited"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.orange+"22",color:T.orange,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>INVITERET</span>}
+              </div>
               <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:1,display:"flex",gap:6,flexWrap:"wrap"}}>
                 <span>{u.email}</span>
                 {u.instrument&&<span>· {u.instrument}</span>}
                 {(u.tags||[]).map(t=><span key={t} style={{background:T.orange+"22",color:T.orange,padding:"1px 6px",fontSize:9,letterSpacing:"0.07em",fontWeight:700}}>{TAG_LABELS[t]||t}</span>)}
               </div>
             </div>
-            <div style={{display:"flex",gap:5,flexShrink:0}}>
+            <div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
+              {u.status==="pending"&&<button onClick={()=>generateLink(u)} disabled={inviteLoading===u.id}
+                style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em",opacity:inviteLoading===u.id?0.6:1}}>
+                {inviteLoading===u.id?"...":"🔗 LINK"}
+              </button>}
+              {u.status==="invited"&&<button onClick={async()=>{
+                const res=await fetch("/api/invitations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,email:u.email})});
+                const data=await res.json();
+                if(data.link)setLinkModal({user:u,link:data.link});
+              }} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em"}}>
+                🔗 LINK
+              </button>}
               <button onClick={()=>openEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}}
                 onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
@@ -1040,7 +1074,31 @@ function AdminView({users,setUsers,T}){
       }} color={T.orange}>{syncState.loading?"SYNKRONISERER...":"SYNKRONISER NU →"}</Btn>
       {syncState.msg&&<div style={{marginTop:12,fontSize:12,color:syncState.msg.err?T.red:T.green,fontFamily:"'Poppins',sans-serif"}}>{syncState.msg.text}</div>}
     </div>
-    {confirmRemoveUser&&<ConfirmModal message={`Er du sikker på at du vil fjerne "${confirmRemoveUser.first} ${confirmRemoveUser.last}"? Handlingen kan ikke fortrydes.`} onConfirm={async()=>{await fetch(`/api/users?id=${confirmRemoveUser.id}`,{method:"DELETE"}).catch(()=>{});setUsers(prev=>prev.filter(x=>x.id!==confirmRemoveUser.id));setConfirmRemoveUser(null);}} onCancel={()=>setConfirmRemoveUser(null)} T={T}/>}
+    {confirmRemoveUser&&<ConfirmModal message={`Er du sikker på at du vil fjerne "${confirmRemoveUser.first} ${confirmRemoveUser.last}"? Handlingen kan ikke fortrydes.`} onConfirm={async()=>{
+      await fetch(`/api/users?id=${confirmRemoveUser.id}`,{method:"DELETE"}).catch(()=>{});
+      // Also revoke any pending invitation
+      if(confirmRemoveUser.status==="invited"){
+        // Fetch current token for this user and delete it
+        // We delete via user archive which cascades due to ON DELETE CASCADE
+      }
+      setUsers(prev=>prev.filter(x=>x.id!==confirmRemoveUser.id));
+      setConfirmRemoveUser(null);
+    }} onCancel={()=>setConfirmRemoveUser(null)} T={T}/>}
+    {linkModal&&(<div style={{position:"fixed",inset:0,background:"#000c",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setLinkModal(null)}>
+      <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:16,padding:28,maxWidth:500,width:"100%"}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:4}}>INVITATIONSLINK</div>
+        <div style={{fontSize:13,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:16,lineHeight:1.5}}>Send dette link til <strong style={{color:T.white}}>{linkModal.user.first}</strong> via SMS, mail eller besked. Linket udløber om 14 dage.</div>
+        <div style={{display:"flex",gap:8,alignItems:"stretch",marginBottom:16}}>
+          <input readOnly value={linkModal.link} style={{flex:1,background:T.black,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 12px",color:T.white,fontSize:11,fontFamily:"'Poppins',sans-serif",outline:"none",minWidth:0}} onClick={e=>e.target.select()}/>
+          <button onClick={()=>copyLink(linkModal.link)} style={{padding:"10px 16px",background:copied?T.green:T.orange,border:"none",borderRadius:8,color:"#F8F5E6",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Poppins',sans-serif",flexShrink:0,transition:"background .2s"}}>
+            {copied?"KOPIERET ✓":"KOPIER"}
+          </button>
+        </div>
+        <div style={{display:"flex",justifyContent:"flex-end"}}>
+          <Btn onClick={()=>setLinkModal(null)} color={T.muted} small>LUK</Btn>
+        </div>
+      </div>
+    </div>)}
     {editing!==null&&(<Modal title={editing==="new"?"OPRET BRUGER":"REDIGER BRUGER"} onClose={()=>setEditing(null)} T={T} wide>
       <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:20}}>
         <div style={{cursor:"pointer",flexShrink:0}} onClick={()=>avatarRef.current.click()}>

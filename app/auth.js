@@ -18,6 +18,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!user || !user.password_hash) return null;
         const ok = await bcrypt.compare(credentials.password, user.password_hash);
         if (!ok) return null;
+        // Auto-activate invited users who successfully enter correct password
+        if (user.status === "invited" || user.status === "pending") {
+          await sql`UPDATE users SET status = 'active' WHERE id = ${user.id}`;
+        }
         return {
           id: user.id,
           email: user.email,
@@ -34,7 +38,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const rows = await sql`SELECT * FROM users WHERE email = ${user.email} AND (archived = false OR archived IS NULL)`;
         if (rows.length === 0) return false;
         const dbUser = rows[0];
-        await sql`UPDATE users SET google_id = ${account.providerAccountId}, email_verified = NOW() WHERE id = ${dbUser.id}`;
+        // Link google account and activate regardless of prior status
+        await sql`UPDATE users SET google_id = ${profile.sub}, email_verified = NOW(), status = 'active' WHERE id = ${dbUser.id}`;
         user.id = dbUser.id;
         user.role = dbUser.role;
         user.isAdmin = dbUser.is_admin;
