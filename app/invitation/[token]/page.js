@@ -15,6 +15,7 @@ export default function InvitationPage({ params }) {
   const [invitation, setInvitation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [method, setMethod] = useState(null); // null | "password"
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [error, setError] = useState("");
@@ -27,35 +28,38 @@ export default function InvitationPage({ params }) {
       .then(data => { setInvitation(data); setLoading(false); });
   }, [token]);
 
-  async function activateAndSignIn(chosenMethod) {
+  async function activateGoogle() {
+    setWorking(true);
+    setError("");
+    // Redirect through NextAuth Google flow; finalize endpoint handles the linking
+    await signIn("google", { callbackUrl: `/api/invitations/finalize?token=${token}` });
+  }
+
+  async function activatePassword(e) {
+    e.preventDefault();
     setWorking(true);
     setError("");
 
-    if (chosenMethod === "password") {
-      if (password.length < 6) { setError("Adgangskode skal være mindst 6 tegn"); setWorking(false); return; }
-      if (password !== confirmPw) { setError("Adgangskoderne matcher ikke"); setWorking(false); return; }
-    }
+    if (!email || !email.includes("@")) { setError("Indtast en gyldig email-adresse"); setWorking(false); return; }
+    if (password.length < 6) { setError("Adgangskode skal være mindst 6 tegn"); setWorking(false); return; }
+    if (password !== confirmPw) { setError("Adgangskoderne matcher ikke"); setWorking(false); return; }
 
     const res = await fetch("/api/invitations/activate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, method: chosenMethod, password }),
+      body: JSON.stringify({ token, method: "password", email, password }),
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error || "Noget gik galt"); setWorking(false); return; }
 
     setDone(true);
-    if (chosenMethod === "google") {
-      await signIn("google", { callbackUrl: "/" });
-    } else {
-      await signIn("credentials", { email: invitation.email, password, callbackUrl: "/" });
-    }
+    await signIn("credentials", { email, password, callbackUrl: "/" });
   }
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) return (
     <Page>
-      <div style={{ textAlign: "center", color: T.muted, fontFamily: "'Poppins',sans-serif", fontSize: 13 }}>
+      <div style={{ textAlign: "center", color: T.muted, fontFamily: "'Poppins',sans-serif", fontSize: 13, padding: "40px 0" }}>
         Verificerer invitation...
       </div>
     </Page>
@@ -72,9 +76,9 @@ export default function InvitationPage({ params }) {
     return (
       <Page>
         <Card>
-          <div style={{ fontSize: 22, color: T.red, fontWeight: 800, marginBottom: 10 }}>⚠</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: T.white, marginBottom: 8 }}>{msg}</div>
-          <div style={{ fontSize: 13, color: T.muted }}>Kontakt en administrator for at få et nyt link.</div>
+          <div style={{ fontSize: 28, marginBottom: 10 }}>⚠</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: T.white, marginBottom: 8, fontFamily: "'Poppins',sans-serif" }}>{msg}</div>
+          <div style={{ fontSize: 13, color: T.muted, fontFamily: "'Poppins',sans-serif" }}>Kontakt en administrator for at få et nyt link.</div>
         </Card>
       </Page>
     );
@@ -84,9 +88,9 @@ export default function InvitationPage({ params }) {
   if (done) return (
     <Page>
       <Card>
-        <div style={{ fontSize: 24, marginBottom: 10 }}>✓</div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: T.green }}>Konto aktiveret!</div>
-        <div style={{ fontSize: 13, color: T.muted, marginTop: 8 }}>Logger ind...</div>
+        <div style={{ fontSize: 28, marginBottom: 10 }}>✓</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: T.green, fontFamily: "'Poppins',sans-serif" }}>Konto oprettet!</div>
+        <div style={{ fontSize: 13, color: T.muted, marginTop: 8, fontFamily: "'Poppins',sans-serif" }}>Logger ind...</div>
       </Card>
     </Page>
   );
@@ -99,26 +103,26 @@ export default function InvitationPage({ params }) {
         <div style={{ fontFamily: "'Poppins',sans-serif", fontWeight: 800, fontSize: 36, color: T.white, lineHeight: 0.9, letterSpacing: "-0.01em" }}>
           NORTH<span style={{ color: T.orange }}>AVENUE</span>
         </div>
-        <div style={{ fontSize: 9, color: T.muted, letterSpacing: "0.18em", marginTop: 10 }}>BACKSTAGE · INVITATION</div>
+        <div style={{ fontSize: 9, color: T.muted, letterSpacing: "0.18em", marginTop: 10, fontFamily: "'Poppins',sans-serif" }}>BACKSTAGE · INVITATION</div>
       </div>
 
       <Card>
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 22 }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: T.white, fontFamily: "'Poppins',sans-serif" }}>
             Hej, {invitation.firstName}!
           </div>
           <div style={{ fontSize: 13, color: T.muted, marginTop: 6, fontFamily: "'Poppins',sans-serif", lineHeight: 1.6 }}>
             Du er inviteret som <strong style={{ color: T.orange }}>{ROLE_LABELS[invitation.role] || invitation.role}</strong> i North Avenue Backstage.
-            Vælg hvordan du vil logge ind.
+            Vælg hvilken email og login-metode du vil bruge.
           </div>
         </div>
 
         {method !== "password" && (
           <>
-            <button onClick={() => activateAndSignIn("google")} disabled={working}
+            <button onClick={activateGoogle} disabled={working}
               style={{ width: "100%", background: T.white, color: T.black, border: "none", borderRadius: 8, padding: "12px", fontSize: 14, fontWeight: 600, cursor: working ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 10, opacity: working ? 0.7 : 1, fontFamily: "'Poppins',sans-serif" }}>
               <GoogleIcon />
-              {working ? "Arbejder..." : "Log ind med Google"}
+              {working ? "Omdirigerer..." : "Log ind med Google"}
             </button>
 
             <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0" }}>
@@ -135,20 +139,26 @@ export default function InvitationPage({ params }) {
         )}
 
         {method === "password" && (
-          <form onSubmit={e => { e.preventDefault(); activateAndSignIn("password"); }} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <form onSubmit={activatePassword} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div>
-              <label style={{ fontSize: 9, color: T.muted, letterSpacing: "0.1em", fontWeight: 700, fontFamily: "'Poppins',sans-serif" }}>EMAIL</label>
-              <input value={invitation.email} readOnly
-                style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, background: T.black, border: `1px solid ${T.border}`, borderRadius: 8, color: T.muted, fontSize: 13, boxSizing: "border-box", fontFamily: "'Poppins',sans-serif", outline: "none" }} />
+              <label style={{ fontSize: 9, color: T.muted, letterSpacing: "0.1em", fontWeight: 700, fontFamily: "'Poppins',sans-serif" }}>DIN EMAIL</label>
+              <input
+                type="email" value={email} onChange={e => setEmail(e.target.value)}
+                required placeholder="din@email.dk" autoFocus
+                style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, background: T.black, border: `1px solid ${T.border}`, borderRadius: 8, color: T.white, fontSize: 13, boxSizing: "border-box", fontFamily: "'Poppins',sans-serif", outline: "none" }} />
             </div>
             <div>
               <label style={{ fontSize: 9, color: T.muted, letterSpacing: "0.1em", fontWeight: 700, fontFamily: "'Poppins',sans-serif" }}>ADGANGSKODE</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Mindst 6 tegn"
+              <input
+                type="password" value={password} onChange={e => setPassword(e.target.value)}
+                required placeholder="Mindst 6 tegn"
                 style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, background: T.black, border: `1px solid ${T.border}`, borderRadius: 8, color: T.white, fontSize: 13, boxSizing: "border-box", fontFamily: "'Poppins',sans-serif", outline: "none" }} />
             </div>
             <div>
               <label style={{ fontSize: 9, color: T.muted, letterSpacing: "0.1em", fontWeight: 700, fontFamily: "'Poppins',sans-serif" }}>BEKRÆFT ADGANGSKODE</label>
-              <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} required placeholder="Gentag adgangskode"
+              <input
+                type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
+                required placeholder="Gentag adgangskode"
                 style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, background: T.black, border: `1px solid ${T.border}`, borderRadius: 8, color: T.white, fontSize: 13, boxSizing: "border-box", fontFamily: "'Poppins',sans-serif", outline: "none" }} />
             </div>
             {error && <div style={{ color: T.red, fontSize: 12, fontFamily: "'Poppins',sans-serif" }}>{error}</div>}
@@ -156,7 +166,7 @@ export default function InvitationPage({ params }) {
               style={{ background: T.orange, color: "#F8F5E6", border: "none", borderRadius: 8, padding: "12px", fontSize: 14, fontWeight: 700, cursor: working ? "not-allowed" : "pointer", marginTop: 4, opacity: working ? 0.7 : 1, fontFamily: "'Poppins',sans-serif" }}>
               {working ? "Opretter konto..." : "Opret konto →"}
             </button>
-            <button type="button" onClick={() => { setMethod(null); setError(""); }}
+            <button type="button" onClick={() => { setMethod(null); setError(""); setEmail(""); setPassword(""); setConfirmPw(""); }}
               style={{ background: "transparent", border: "none", color: T.muted, cursor: "pointer", fontSize: 12, fontFamily: "'Poppins',sans-serif", padding: "4px" }}>
               ← Tilbage
             </button>
@@ -182,7 +192,7 @@ function Page({ children }) {
 
 function Card({ children }) {
   return (
-    <div style={{ background: T.dim, borderRadius: 16, padding: "28px 28px", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}>
+    <div style={{ background: T.dim, borderRadius: 16, padding: "28px", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}>
       {children}
     </div>
   );

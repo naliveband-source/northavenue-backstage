@@ -974,7 +974,7 @@ function AdminView({users,setUsers,T}){
   const toggleTag=tag=>setForm(p=>({...p,tags:p.tags.includes(tag)?p.tags.filter(t=>t!==tag):[...p.tags,tag]}));
   const handleAvatarFile=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setForm(p=>({...p,avatar:ev.target.result}));r.readAsDataURL(f);};
   const save=()=>{
-    if(!form.first||!form.email)return;
+    if(!form.first)return;
     const subType=deriveSubType(form.isAdmin,form.tags);
     const role=form.isAdmin?"admin":"musician";
     const needsMid=subType!=="alias"||form.tags.includes("vikar");
@@ -986,10 +986,9 @@ function AdminView({users,setUsers,T}){
     setEditing(null);
   };
   const generateLink=async(u)=>{
-    if(!u.email){alert("Brugeren skal have en email for at generere et invitationslink.");return;}
     setInviteLoading(u.id);
     try{
-      const res=await fetch("/api/invitations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,email:u.email})});
+      const res=await fetch("/api/invitations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id})});
       const data=await res.json();
       if(data.link){
         setUsers(prev=>prev.map(x=>x.id===u.id?{...x,status:"invited"}:x));
@@ -1028,7 +1027,7 @@ function AdminView({users,setUsers,T}){
                 {u.status==="invited"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.orange+"22",color:T.orange,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>INVITERET</span>}
               </div>
               <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:1,display:"flex",gap:6,flexWrap:"wrap"}}>
-                <span>{u.email}</span>
+                {u.email?<span>{u.email}</span>:<span style={{color:T.border,fontStyle:"italic"}}>(ingen email)</span>}
                 {u.instrument&&<span>· {u.instrument}</span>}
                 {(u.tags||[]).map(t=><span key={t} style={{background:T.orange+"22",color:T.orange,padding:"1px 6px",fontSize:9,letterSpacing:"0.07em",fontWeight:700}}>{TAG_LABELS[t]||t}</span>)}
               </div>
@@ -1039,7 +1038,7 @@ function AdminView({users,setUsers,T}){
                 {inviteLoading===u.id?"...":"🔗 LINK"}
               </button>}
               {u.status==="invited"&&<button onClick={async()=>{
-                const res=await fetch("/api/invitations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,email:u.email})});
+                const res=await fetch("/api/invitations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id})});
                 const data=await res.json();
                 if(data.link)setLinkModal({user:u,link:data.link});
               }} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em"}}>

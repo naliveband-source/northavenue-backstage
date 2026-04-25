@@ -1,14 +1,20 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [activated, setActivated] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("activated") === "1") setActivated(true);
+  }, [searchParams]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -48,6 +54,11 @@ export default function LoginPage() {
         maxWidth: 380,
         boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
       }}>
+        {activated && (
+          <div style={{ background: "#1E7B5B22", border: "1px solid #1E7B5B55", borderRadius: 8, padding: "10px 14px", marginBottom: 20, fontSize: 13, color: "#1E7B5B", fontWeight: 600 }}>
+            ✓ Konto aktiveret! Log ind med samme Google-konto for at fortsætte.
+          </div>
+        )}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{ fontSize: 28, fontWeight: 800, color: "#F8F5E6", letterSpacing: 1 }}>
             NORTH AVENUE
@@ -148,4 +159,8 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+export default function Page() {
+  return <Suspense><LoginPage /></Suspense>;
 }
