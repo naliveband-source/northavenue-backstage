@@ -169,8 +169,7 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
     <div style={{position:"fixed",inset:0,background:"#000d",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setChipProfile(null)}>
       <div style={{background:"#1E1C1D",border:`1px solid ${userColor(chipProfile)}55`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:18}}>
-          {chipProfile.avatar?<img src={chipProfile.avatar} alt="" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:`2px solid ${userColor(chipProfile)}`}}/>
-            :<div style={{width:52,height:52,background:userColor(chipProfile)+"22",border:`2px solid ${userColor(chipProfile)}`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:userColor(chipProfile),fontFamily:"'Poppins',sans-serif"}}>{chipProfile.initials}</div>}
+          <div style={{width:52,height:52,background:userColor(chipProfile)+"22",border:`2px solid ${userColor(chipProfile)}`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:userColor(chipProfile),fontFamily:"'Poppins',sans-serif"}}>{chipProfile.initials}</div>
           <div>
             <div style={{fontSize:17,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{chipProfile.first} {chipProfile.last}</div>
             <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginTop:3}}>{chipProfile.instrument||"–"}</div>
@@ -407,8 +406,7 @@ function UserChip({user,active,T}){
       <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setOpen(false)}>
         <div style={{background:"#1E1C1D",border:`1px solid ${color}55`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
           <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:18}}>
-            {user.avatar?<img src={user.avatar} alt="" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:`2px solid ${color}`}}/>
-              :<div style={{width:52,height:52,background:color+"22",border:`2px solid ${color}`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color,fontFamily:"'Poppins',sans-serif"}}>{user.initials}</div>}
+            <div style={{width:52,height:52,background:color+"22",border:`2px solid ${color}`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color,fontFamily:"'Poppins',sans-serif"}}>{user.initials}</div>
             <div>
               <div style={{fontSize:17,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{user.first} {user.last}</div>
               <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginTop:3}}>{user.instrument||"–"}</div>
@@ -773,11 +771,21 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   const totalMPay=filtered.reduce((s,b)=>s+calcMusicianPay(b.bandPay),0);
   const myEarned=isSub?myJobs.reduce((s,b)=>s+calcSubPay(calcMusicianPay(b.bandPay)),0):myJobs.reduce((s,b)=>s+calcMusicianPay(b.bandPay),0);
 
-  const toggleMember=(bid,mid)=>setBookings(prev=>prev.map(b=>{
-    if(b.id!==bid)return b;
-    const has=b.memberIds.includes(mid);
-    return {...b,memberIds:has?b.memberIds.filter(x=>x!==mid):[...b.memberIds,mid]};
-  }));
+  const [toggleErr,setToggleErr]=useState(null);
+  const toggleMember=async(bid,mid)=>{
+    const snapshot=bookings;
+    setBookings(bs=>bs.map(b=>{
+      if(b.id!==bid)return b;
+      const has=b.memberIds.includes(mid);
+      return{...b,memberIds:has?b.memberIds.filter(x=>x!==mid):[...b.memberIds,mid]};
+    }));
+    const bk=snapshot.find(b=>b.id===bid);
+    const action=bk?.memberIds.includes(mid)?'remove':'add';
+    try{
+      const res=await fetch('/api/bookings/toggle-member',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({bookingId:bid,musicianId:mid,action})});
+      if(!res.ok){setBookings(snapshot);setToggleErr(bid);setTimeout(()=>setToggleErr(null),2000);}
+    }catch{setBookings(snapshot);setToggleErr(bid);setTimeout(()=>setToggleErr(null),2000);}
+  };
 
   const oA=darkMode?"#D4622A":"#C4521F";
   const statItems=isAdmin
@@ -842,8 +850,8 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
                 <div style={{fontSize:isMobile?14:16,fontWeight:800,color:isAdmin?T.orange:br.color,fontFamily:"'Poppins',sans-serif"}}>{isAdmin?fmt(b.bandPay):fmt(pay)}</div>
                 {!isAdmin&&!isSub&&!past&&(
                   <button onClick={e=>{e.stopPropagation();toggleMember(b.id,currentUser.musicianId);}}
-                    style={{padding:"4px 10px",border:`1px solid ${iAmIn?T.red:T.green}`,background:iAmIn?T.red+"18":T.green+"22",color:iAmIn?T.red:T.green,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
-                    {iAmIn?"MELD FRAVÆRENDE":"MELD PÅ"}
+                    style={{padding:"4px 10px",border:`1px solid ${toggleErr===b.id?T.red:iAmIn?T.red:T.green}`,background:iAmIn?T.red+"18":T.green+"22",color:toggleErr===b.id?T.red:iAmIn?T.red:T.green,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
+                    {toggleErr===b.id?"FEJL":iAmIn?"MELD FRAVÆRENDE":"MELD PÅ"}
                   </button>
                 )}
                 {isAdmin&&(
@@ -1149,8 +1157,7 @@ function SortableMusicianRow({u,T,onEdit,onDelete,onGenerateLink,onShowLink,invi
     <div ref={setNodeRef} style={style}>
       <div style={{background:isDragging?T.orange+"11":T.dim,padding:"13px 16px",display:"flex",alignItems:"center",gap:12,borderLeft:`2px solid ${c}`,opacity:isDragging?0.8:1}}>
         <div {...attributes} {...listeners} style={{color:T.muted,cursor:isDragging?"grabbing":"grab",fontSize:13,padding:"2px 4px",flexShrink:0,touchAction:"none",lineHeight:1,userSelect:"none"}}>☰</div>
-        {u.avatar?<img src={u.avatar} alt="" style={{width:34,height:34,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
-          :<div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>}
+        <div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:13,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             {u.first} {u.last}
@@ -1183,17 +1190,15 @@ function SortableMusicianRow({u,T,onEdit,onDelete,onGenerateLink,onShowLink,invi
 }
 
 // ── ADMIN ──────────────────────────────────────────────────────────────────
-function AdminView({users,setUsers,T,onReorder}){
+function AdminView({users,setUsers,T,onReorder,onUserSaved}){
   const [editing,setEditing]=useState(null);
-  const blank={first:"",last:"",initials:"",instrument:"",email:"",password:"",isAdmin:false,tags:[],phone:"",avatar:null,color:""};
+  const blank={first:"",last:"",initials:"",instrument:"",email:"",password:"",isAdmin:false,tags:[],phone:"",color:""};
   const [form,setForm]=useState(blank);
   const [confirmRemoveUser,setConfirmRemoveUser]=useState(null);
-  const avatarRef=useRef();
   const [syncState,setSyncState]=useState({loading:false,msg:null});
   const [linkModal,setLinkModal]=useState(null); // { user, link } | null
   const [inviteLoading,setInviteLoading]=useState(null); // userId being processed
   const [copied,setCopied]=useState(false);
-  const nextMid=()=>Math.max(0,...users.map(u=>u.musicianId||0))+1;
   const deriveSubType=(isAdm,tags)=>{
     if(isAdm)return "owner";
     if(tags.includes("alias_manager")&&!tags.includes("vikar")&&!tags.includes("musiker"))return "alias";
@@ -1201,19 +1206,30 @@ function AdminView({users,setUsers,T,onReorder}){
     return "member";
   };
   const openNew=()=>{setForm(blank);setEditing("new");};
-  const openEdit=u=>{setForm({first:u.first,last:u.last,initials:u.initials,instrument:u.instrument||"",email:u.email,password:"",isAdmin:u.isAdmin||false,tags:u.tags||[],phone:u.phone||"",avatar:u.avatar||null,color:u.color||SPOT[u.id]||""});setEditing(u);};
-  const toggleTag=tag=>setForm(p=>({...p,tags:p.tags.includes(tag)?p.tags.filter(t=>t!==tag):[...p.tags,tag]}));
-  const handleAvatarFile=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setForm(p=>({...p,avatar:ev.target.result}));r.readAsDataURL(f);};
-  const save=()=>{
+  const openEdit=u=>{setForm({first:u.first,last:u.last,initials:u.initials,instrument:u.instrument||"",email:u.email,password:"",isAdmin:u.isAdmin||false,tags:u.tags||[],phone:u.phone||"",color:u.color||SPOT[u.id]||""});setEditing(u);};
+  const toggleTag=tag=>setForm(p=>{
+    const has=p.tags.includes(tag);
+    if(has)return{...p,tags:p.tags.filter(t=>t!==tag)};
+    if(tag==="musiker")return{...p,tags:[...p.tags.filter(t=>t!=="vikar"),"musiker"]};
+    if(tag==="vikar")return{...p,tags:[...p.tags.filter(t=>t!=="musiker"),"vikar"]};
+    return{...p,tags:[...p.tags,tag]};
+  });
+  const save=async()=>{
     if(!form.first)return;
     const subType=deriveSubType(form.isAdmin,form.tags);
     const role=form.isAdmin?"admin":"musician";
-    const needsMid=subType!=="alias"||form.tags.includes("vikar");
-    if(editing==="new"){
-      setUsers(prev=>[...prev,{id:`u${Date.now()}`,musicianId:needsMid?nextMid():null,name:form.first,role,subType,isAdmin:form.isAdmin,status:"pending",...form,...(form.password?{}:{password:"changeme"})}]);
-    } else {
-      setUsers(prev=>prev.map(u=>u.id===editing.id?{...u,first:form.first,last:form.last,initials:form.initials,instrument:form.instrument,email:form.email,isAdmin:form.isAdmin,role,subType,tags:form.tags,phone:form.phone,name:form.first,avatar:form.avatar,color:form.color,...(form.password?{password:form.password}:{})}:u));
-    }
+    const id=editing==="new"?`u${Date.now()}`:editing.id;
+    await fetch("/api/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      id,first:form.first,last:form.last,initials:form.initials,
+      instrument:form.instrument||"",email:form.email,
+      phone:form.phone||"",color:form.color||"",
+      role,subType,isAdmin:form.isAdmin,tags:form.tags,
+      musicianId:editing==="new"?null:(editing.musicianId??null),
+      theme:editing==="new"?"dark":(editing.theme||"dark"),
+      status:editing==="new"?"pending":(editing.status||"active"),
+      ...(form.password?{password:form.password}:{}),
+    })}).catch(console.error);
+    await onUserSaved?.();
     setEditing(null);
   };
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:5}}));
@@ -1260,8 +1276,7 @@ function AdminView({users,setUsers,T,onReorder}){
 
   const StaticRow=({u,grpKey})=>{const c=userColor(u);return(
     <div key={`${grpKey}-${u.id}`} style={{background:T.dim,padding:"13px 16px",display:"flex",alignItems:"center",gap:12,borderLeft:`2px solid ${c}`}}>
-      {u.avatar?<img src={u.avatar} alt="" style={{width:34,height:34,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
-        :<div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>}
+      <div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:13,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
           {u.first} {u.last}
@@ -1362,14 +1377,6 @@ function AdminView({users,setUsers,T,onReorder}){
       </div>
     </div>)}
     {editing!==null&&(<Modal title={editing==="new"?"OPRET BRUGER":"REDIGER BRUGER"} onClose={()=>setEditing(null)} T={T} wide>
-      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:20}}>
-        <div style={{cursor:"pointer",flexShrink:0}} onClick={()=>avatarRef.current.click()}>
-          {form.avatar?<img src={form.avatar} alt="" style={{width:56,height:56,borderRadius:2,objectFit:"cover",border:`2px solid ${T.orange}`}}/>
-            :<div style={{width:56,height:56,background:T.black,border:`2px dashed ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>FOTO</div>}
-          <input ref={avatarRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatarFile}/>
-        </div>
-        <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>Klik for at uploade profilbillede</div>
-      </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <Field label="FORNAVN" T={T}><Inp value={form.first} onChange={e=>setForm(p=>({...p,first:e.target.value}))} T={T}/></Field>
         <Field label="EFTERNAVN" T={T}><Inp value={form.last} onChange={e=>setForm(p=>({...p,last:e.target.value}))} T={T}/></Field>
@@ -1416,120 +1423,17 @@ function AdminView({users,setUsers,T,onReorder}){
 }
 
 // ── PROFILE ────────────────────────────────────────────────────────────────
-// ── AVATAR EDITOR ─────────────────────────────────────────────────────────
-function AvatarEditor({src,onSave,onClose,T}){
-  const previewSize=300;
-  const [zoom,setZoom]=useState(1);
-  const [pos,setPos]=useState({x:0,y:0});
-  const [dragging,setDragging]=useState(false);
-  const [imgSize,setImgSize]=useState({w:0,h:0});
-  const dragStart=useRef({x:0,y:0,px:0,py:0});
-  const imgRef=useRef();
-  const canvasRef=useRef();
-
-  // Base scale = "fit" (whole image visible at zoom 1)
-  const baseScale=imgSize.w&&imgSize.h?Math.min(previewSize/imgSize.w,previewSize/imgSize.h):1;
-  const currentScale=baseScale*zoom;
-  const drawW=imgSize.w*currentScale;
-  const drawH=imgSize.h*currentScale;
-
-  const onImgLoad=()=>{
-    if(imgRef.current){
-      setImgSize({w:imgRef.current.naturalWidth,h:imgRef.current.naturalHeight});
-      setPos({x:0,y:0});
-      setZoom(1);
-    }
-  };
-
-  const onMouseDown=e=>{
-    setDragging(true);
-    const touch=e.touches?e.touches[0]:e;
-    dragStart.current={x:touch.clientX,y:touch.clientY,px:pos.x,py:pos.y};
-  };
-  const onMouseMove=e=>{
-    if(!dragging)return;
-    const touch=e.touches?e.touches[0]:e;
-    const dx=touch.clientX-dragStart.current.x;
-    const dy=touch.clientY-dragStart.current.y;
-    setPos({x:dragStart.current.px+dx,y:dragStart.current.py+dy});
-  };
-  const onMouseUp=()=>setDragging(false);
-
-  useEffect(()=>{
-    if(!dragging)return;
-    window.addEventListener("mousemove",onMouseMove);
-    window.addEventListener("mouseup",onMouseUp);
-    window.addEventListener("touchmove",onMouseMove);
-    window.addEventListener("touchend",onMouseUp);
-    return()=>{
-      window.removeEventListener("mousemove",onMouseMove);
-      window.removeEventListener("mouseup",onMouseUp);
-      window.removeEventListener("touchmove",onMouseMove);
-      window.removeEventListener("touchend",onMouseUp);
-    };
-  },[dragging]);
-
-  const save=()=>{
-    const size=300;
-    const canvas=canvasRef.current;
-    canvas.width=size;canvas.height=size;
-    const ctx=canvas.getContext("2d");
-    const img=imgRef.current;
-    const cx=previewSize/2+pos.x;
-    const cy=previewSize/2+pos.y;
-    // Fill background in case image doesn't cover full circle
-    ctx.fillStyle="#181719";
-    ctx.fillRect(0,0,size,size);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(size/2,size/2,size/2,0,Math.PI*2);
-    ctx.clip();
-    ctx.drawImage(img,cx-drawW/2,cy-drawH/2,drawW,drawH);
-    ctx.restore();
-    const dataUrl=canvas.toDataURL("image/jpeg",0.88);
-    onSave(dataUrl);
-  };
-
-  return(<div style={{position:"fixed",inset:0,background:"#000d",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={onClose}>
-    <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:16,padding:24,maxWidth:380,width:"100%"}} onClick={e=>e.stopPropagation()}>
-      <div style={{fontSize:11,color:T.orange,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:16}}>TILPAS PROFILBILLEDE</div>
-      <div style={{position:"relative",width:previewSize,height:previewSize,margin:"0 auto 16px",background:T.black,borderRadius:12,overflow:"hidden",cursor:dragging?"grabbing":"grab",userSelect:"none"}}
-        onMouseDown={onMouseDown} onTouchStart={onMouseDown}>
-        <img ref={imgRef} src={src} alt="" onLoad={onImgLoad}
-          style={{position:"absolute",left:"50%",top:"50%",width:drawW?`${drawW}px`:"auto",height:drawH?`${drawH}px`:"auto",transform:`translate(calc(-50% + ${pos.x}px),calc(-50% + ${pos.y}px))`,pointerEvents:"none",maxWidth:"none"}}
-          draggable={false}/>
-        <div style={{position:"absolute",inset:0,pointerEvents:"none",background:"radial-gradient(circle,transparent 149px,#000000cc 150px)"}}/>
-      </div>
-      <div style={{marginBottom:16}}>
-        <div style={{fontSize:9,color:T.muted,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",marginBottom:8,display:"flex",justifyContent:"space-between"}}>
-          <span>ZOOM</span><span>{(zoom*100|0)}%</span>
-        </div>
-        <input type="range" min="0.5" max="4" step="0.01" value={zoom} onChange={e=>setZoom(parseFloat(e.target.value))}
-          style={{width:"100%",accentColor:T.orange}}/>
-      </div>
-      <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",textAlign:"center",marginBottom:16,lineHeight:1.6}}>Træk for at flytte · skub slideren for at zoome</div>
-      <canvas ref={canvasRef} style={{display:"none"}}/>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-        <Btn onClick={onClose} color={T.muted} small>ANNULLER</Btn>
-        <Btn onClick={save} color={T.orange} small>GEM BILLEDE</Btn>
-      </div>
-    </div>
-  </div>);
-}
 
 function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
   const u=users.find(x=>x.id===currentUser.id)||currentUser;
   const [form,setForm]=useState({first:u.first||"",last:u.last||"",phone:u.phone||"",email:u.email||""});
   const [pw,setPw]=useState({old:"",next:"",conf:""});
-  const [avatar,setAvatar]=useState(u.avatar||null);
-  const [editorSrc,setEditorSrc]=useState(null);
   const [msg,setMsg]=useState(null);const [pwMsg,setPwMsg]=useState(null);
   const [deleteConfirm,setDeleteConfirm]=useState(false);
-  const fileRef=useRef();
   const saveProfile=()=>{
     const taken=users.some(x=>x.id!==currentUser.id&&x.email===form.email);
     if(taken){setMsg({err:true,text:"Email er allerede i brug"});return;}
-    setUsers(prev=>prev.map(x=>x.id===currentUser.id?{...x,...form,name:form.first,avatar}:x));
+    setUsers(prev=>prev.map(x=>x.id===currentUser.id?{...x,...form,name:form.first}:x));
     setMsg({err:false,text:"Profil gemt ✓"});
   };
   const savePw=()=>{
@@ -1540,28 +1444,9 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
     setUsers(prev=>prev.map(x=>x.id===currentUser.id?{...x,password:pw.next}:x));
     setPwMsg({err:false,text:"Adgangskode opdateret ✓"});setPw({old:"",next:"",conf:""});
   };
-  const handleFile=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setEditorSrc(ev.target.result);r.readAsDataURL(f);e.target.value="";};
-  const saveAvatar=cropped=>{
-    setAvatar(cropped);
-    setEditorSrc(null);
-    setUsers(prev=>prev.map(x=>x.id===currentUser.id?{...x,avatar:cropped}:x));
-    setMsg({err:false,text:"Profilbillede gemt ✓"});
-  };
   return(<div style={{maxWidth:500,display:"flex",flexDirection:"column",gap:16}}>
     <div style={{background:T.dim,padding:28,borderRadius:12}}>
       <div style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:20}}>PROFILOPLYSNINGER</div>
-      <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
-        <div style={{cursor:"pointer",position:"relative"}} onClick={()=>fileRef.current.click()}>
-          {avatar?<img src={avatar} alt="" style={{width:72,height:72,borderRadius:"50%",objectFit:"cover",border:`2px solid ${T.orange}`}}/>
-            :<div style={{width:72,height:72,borderRadius:"50%",background:T.black,border:`2px dashed ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>FOTO</div>}
-          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFile}/>
-        </div>
-        <div>
-          <div style={{fontSize:14,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{u.first} {u.last}</div>
-          <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:4}}>Klik på billedet for at uploade og tilpasse</div>
-          {avatar&&<button onClick={()=>{setAvatar(null);setUsers(prev=>prev.map(x=>x.id===currentUser.id?{...x,avatar:null}:x));}} style={{marginTop:8,padding:"4px 10px",background:"transparent",border:`1px solid ${T.red}44`,color:T.red,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6,letterSpacing:"0.06em"}}>FJERN BILLEDE</button>}
-        </div>
-      </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <Field label="FORNAVN" T={T}><Inp value={form.first} onChange={e=>setForm(p=>({...p,first:e.target.value}))} T={T}/></Field>
         <Field label="EFTERNAVN" T={T}><Inp value={form.last} onChange={e=>setForm(p=>({...p,last:e.target.value}))} T={T}/></Field>
@@ -1600,7 +1485,6 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
       </div>
       <Btn onClick={()=>setDeleteConfirm(true)} color={T.red} small>SLET MIN PROFIL</Btn>
     </div>
-    {editorSrc&&<AvatarEditor src={editorSrc} onSave={saveAvatar} onClose={()=>setEditorSrc(null)} T={T}/>}
     {deleteConfirm&&<ConfirmModal
       message="Er du sikker? Din profil arkiveres og du logges ud. Kontakt admin hvis du fortryder."
       onConfirm={async()=>{
@@ -1793,6 +1677,15 @@ export default function App(){
     if(session)handleSetUsers(prev=>prev.map(u=>u.id===session.user.id?{...u,theme:val?"dark":"light"}:u));
   };
 
+  const handleUserSaved=async()=>{
+    const [u,b]=await Promise.all([
+      fetch("/api/users").then(r=>r.json()).catch(()=>null),
+      fetch("/api/bookings").then(r=>r.json()).catch(()=>null),
+    ]);
+    if(Array.isArray(u))setUsers(u.map(x=>({...x,subType:x.sub_type,isAdmin:x.is_admin,musicianId:x.musician_id,tags:JSON.parse(x.tags||"[]"),displayOrder:x.display_order??null})));
+    if(Array.isArray(b))setBookings(b.map(x=>({...x,bandPay:x.band_pay||0,playTime:x.play_time||"",memberIds:JSON.parse(x.member_ids||"[]"),substituteIds:JSON.parse(x.substitute_ids||"[]")})));
+  };
+
   const handleReorder=async(orderedIds)=>{
     try{
       const res=await fetch("/api/users/reorder",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({ids:orderedIds})});
@@ -1878,8 +1771,7 @@ export default function App(){
       </nav>
       <div style={{padding:isTablet?12:16,borderTop:`1px solid ${T.border}`}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-          {curU.avatar?<img src={curU.avatar} alt="" style={{width:30,height:30,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
-            :<div style={{width:30,height:30,background:userColor(curU)+"22",border:`1px solid ${userColor(curU)}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:userColor(curU),fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{curU.initials||"?"}</div>}
+          <div style={{width:30,height:30,background:userColor(curU)+"22",border:`1px solid ${userColor(curU)}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:userColor(curU),fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{curU.initials||"?"}</div>
           <div><div style={{fontSize:isTablet?11:13,fontWeight:700,color:T.white}}>{curU.first}</div>
             <div style={{fontSize:9,color:T.muted}}>{isAdmin?"ADMIN":isSub?"VIKAR":isAliasOnly?"ALIAS":"MUSIKER"}</div>
           </div>
@@ -1901,7 +1793,7 @@ export default function App(){
         {effectiveView==="alias"   &&<AliasView currentUser={curU} aliasData={aliasData} setAliasData={handleSetAliasData} users={users} T={T} darkMode={darkMode}/>}
         {effectiveView==="payroll" &&<PayrollView currentUser={curU} bookings={bookings} payments={payments} setPayments={handleSetPayments} users={users} T={T}/>}
         {effectiveView==="info"    &&<InfoView currentUser={curU} T={T}/>}
-        {effectiveView==="admin"   &&<AdminView users={users} setUsers={handleSetUsers} T={T} onReorder={handleReorder}/>}
+        {effectiveView==="admin"   &&<AdminView users={users} setUsers={handleSetUsers} T={T} onReorder={handleReorder} onUserSaved={handleUserSaved}/>}
         {effectiveView==="profile" &&<ProfileView currentUser={curU} users={users} setUsers={handleSetUsers} T={T} darkMode={darkMode} setDarkMode={handleTheme}/>}
       </div>
     </div>
