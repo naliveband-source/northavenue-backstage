@@ -95,15 +95,37 @@ function cleanDealName(raw) {
     .trim();
 }
 
-function matchAliasManager(raw) {
-  if(!raw) return null;
-  const val = raw.toLowerCase();
-  if(val.includes("niklas"))                                                               return "ua1";
-  if(val.includes("mikkelsen"))                                                            return "ua2";
-  if(val.includes("lasse")  || val.includes("herold"))                                    return "ua3";
-  if(val.includes("jacob")  || val.includes("nørregaard") || val.includes("norregaard"))  return "ua4";
-  if(val.includes("sjabon"))                                                               return "ua5";
-  return null;
+// Looks up an alias manager's user id by their full name from HubSpot.
+// Returns user id string on match, null if not found.
+// stats object (total/matched/unmatched/ambiguous) is mutated in place.
+async function lookupAliasManagerId(fullName, stats) {
+  if (!fullName?.trim()) return null;
+
+  stats.total++;
+  const normalized = fullName.trim().replace(/\s+/g, " ");
+
+  const rows = await sql`
+    SELECT id, first, last
+    FROM users
+    WHERE LOWER(TRIM(first || ' ' || last)) = LOWER(${normalized})
+      AND tags LIKE '%alias_manager%'
+      AND (archived = false OR archived IS NULL)
+    LIMIT 2
+  `;
+
+  if (rows.length === 0) {
+    console.warn("[alias-lookup] no match for:", fullName);
+    stats.unmatched++;
+    return null;
+  }
+  if (rows.length === 2) {
+    console.warn("[alias-lookup] ambiguous match for:", fullName, "— picking first");
+    stats.ambiguous++;
+    stats.matched++;
+    return rows[0].id;
+  }
+  stats.matched++;
+  return rows[0].id;
 }
 
 export async function GET(req) {
@@ -138,6 +160,7 @@ export async function GET(req) {
     let skipped = 0;
     const unknownOwners = {};
     const ownerCounts = {};
+    const lookupStats = { total: 0, matched: 0, unmatched: 0, ambiguous: 0 };
 
     for(const deal of filteredDeals) {
       const p = deal.properties;
@@ -159,8 +182,7 @@ export async function GET(req) {
       const isAlias = tag.includes("alias");
 
       if(isAlias) {
-        const managerId = matchAliasManager(p.alias_ansvarlig_1);
-        if(!managerId) { skipped++; continue; }
+        const managerUserId = await lookupAliasManagerId(p.alias_ansvarlig_1, lookupStats);
 
         const existingAlias = await sql`SELECT archived FROM alias_bookings WHERE hs_id = ${hsId}`;
         if(existingAlias[0]?.archived) { skipped++; continue; }
@@ -172,7 +194,7 @@ export async function GET(req) {
             band_pay, booking_fee, car_gear,
             contact, phone, booker, notes
           ) VALUES (
-            ${hsId}, ${managerId}, ${date},
+            ${hsId}, ${managerUserId}, ${date},
             ${cleanDealName(p.dealname)},
             ${p.city || ""},
             ${p.adresse || ""},
@@ -189,20 +211,21 @@ export async function GET(req) {
             ${p.description || ""}
           )
           ON CONFLICT (hs_id) DO UPDATE SET
-            date        = EXCLUDED.date,
-            type        = EXCLUDED.type,
-            city        = EXCLUDED.city,
-            address     = EXCLUDED.address,
-            arrival     = EXCLUDED.arrival,
-            play_time   = EXCLUDED.play_time,
-            sets        = EXCLUDED.sets,
-            musicians   = EXCLUDED.musicians,
-            band_pay    = EXCLUDED.band_pay,
-            booking_fee = EXCLUDED.booking_fee,
-            car_gear    = EXCLUDED.car_gear,
-            contact     = EXCLUDED.contact,
-            phone       = EXCLUDED.phone,
-            booker      = EXCLUDED.booker
+            manager_user_id = EXCLUDED.manager_user_id,
+            date            = EXCLUDED.date,
+            type            = EXCLUDED.type,
+            city            = EXCLUDED.city,
+            address         = EXCLUDED.address,
+            arrival         = EXCLUDED.arrival,
+            play_time       = EXCLUDED.play_time,
+            sets            = EXCLUDED.sets,
+            musicians       = EXCLUDED.musicians,
+            band_pay        = EXCLUDED.band_pay,
+            booking_fee     = EXCLUDED.booking_fee,
+            car_gear        = EXCLUDED.car_gear,
+            contact         = EXCLUDED.contact,
+            phone           = EXCLUDED.phone,
+            booker          = EXCLUDED.booker
         `;
         aliasCount++;
 
@@ -245,6 +268,8 @@ export async function GET(req) {
       }
     }
 
+    console.log("[hubspot-sync] alias-manager lookups:", lookupStats);
+
     // Auto-archive stale HubSpot rows that are no longer in closedwon
     const debug = { originalCount, closedwonCount: filteredDeals.length, stageCounts };
     const currentHsIds = filteredDeals.map(d => "hs_" + String(d.id));
@@ -280,7 +305,8 @@ export async function GET(req) {
         mapped: OWNER_MAP,
         usage: ownerCounts,
         unknownIds: unknownOwners,
-      }
+      },
+      aliasManagerLookups: lookupStats,
     });
 
   } catch(e) {
