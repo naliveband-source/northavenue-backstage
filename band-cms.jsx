@@ -98,7 +98,7 @@ const sortMusicians = arr => [...arr].sort((a,b)=>{
 });
 
 // ── ConfirmModal ───────────────────────────────────────────────────────────
-function ConfirmModal({message,onConfirm,onCancel,T,confirmLabel="JA, FJERN"}){
+function ConfirmModal({message,onConfirm,onCancel,T,confirmLabel="JA, FJERN",confirmLoading=false}){
   return(
     <div style={{position:"fixed",inset:0,background:"#000e",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onCancel}>
       <div style={{background:T.dim,border:`1px solid ${T.red}55`,padding:28,minWidth:320,maxWidth:420,boxShadow:"0 16px 48px #0009"}} onClick={e=>e.stopPropagation()}>
@@ -106,7 +106,7 @@ function ConfirmModal({message,onConfirm,onCancel,T,confirmLabel="JA, FJERN"}){
         <p style={{fontSize:13,color:T.muted,fontFamily:"'Poppins',sans-serif",lineHeight:1.7,marginBottom:20}}>{message}</p>
         <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
           <Btn onClick={onCancel} color={T.muted} small>ANNULLER</Btn>
-          <Btn onClick={onConfirm} color={T.red} small>{confirmLabel}</Btn>
+          <Btn onClick={onConfirm} color={T.red} small disabled={confirmLoading}>{confirmLoading?"SLETTER...":confirmLabel}</Btn>
         </div>
       </div>
     </div>
@@ -428,10 +428,10 @@ function PayBadge({amount,color}){
   return <span style={{background:c+"22",border:`1px solid ${c}55`,color:c,borderRadius:2,padding:"2px 9px",fontFamily:"'Poppins',sans-serif",fontWeight:700,fontSize:12,whiteSpace:"nowrap"}}>{fmt(amount)}</span>;
 }
 
-function Btn({children,onClick,color,style={},small=false}){
+function Btn({children,onClick,color,style={},small=false,disabled=false}){
   const [h,setH]=useState(false);
-  return <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
-    style={{padding:small?"5px 14px":"9px 20px",background:h?color+"dd":color,border:"none",color:"#F8F5E6",fontWeight:700,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:small?10:11,letterSpacing:"0.07em",transition:"all .15s",borderRadius:8,...style}}>
+  return <button onClick={onClick} disabled={disabled} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
+    style={{padding:small?"5px 14px":"9px 20px",background:h&&!disabled?color+"dd":color,border:"none",color:"#F8F5E6",fontWeight:700,cursor:disabled?"not-allowed":"pointer",fontFamily:"'Poppins',sans-serif",fontSize:small?10:11,letterSpacing:"0.07em",transition:"all .15s",borderRadius:8,opacity:disabled?0.6:1,...style}}>
     {children}
   </button>;
 }
@@ -1149,7 +1149,7 @@ function InfoView({currentUser,T}){
 }
 
 // ── Sortable musician row (DnD) ────────────────────────────────────────────
-function SortableMusicianRow({u,T,onEdit,onDelete,onGenerateLink,onShowLink,inviteLoading}){
+function SortableMusicianRow({u,T,onEdit,onDelete,onGenerateLink,onShowLink,inviteLoading,deleting}){
   const {attributes,listeners,setNodeRef,transform,transition,isDragging}=useSortable({id:u.id});
   const style={transform:CSS.Transform.toString(transform),transition,position:"relative",zIndex:isDragging?1:0};
   const c=userColor(u);
@@ -1182,7 +1182,7 @@ function SortableMusicianRow({u,T,onEdit,onDelete,onGenerateLink,onShowLink,invi
           <button onClick={()=>onEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}}
             onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}}
             onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
-          <Btn onClick={()=>onDelete(u)} color={T.red} small>FJERN</Btn>
+          <Btn onClick={()=>onDelete(u)} color={T.red} small disabled={deleting}>FJERN</Btn>
         </div>
       </div>
     </div>
@@ -1194,6 +1194,8 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
   const [editing,setEditing]=useState(null);
   const blank={first:"",last:"",initials:"",instrument:"",email:"",password:"",isAdmin:false,tags:[],phone:"",color:""};
   const [form,setForm]=useState(blank);
+  const [saving,setSaving]=useState(false);
+  const [deleting,setDeleting]=useState(false);
   const [confirmRemoveUser,setConfirmRemoveUser]=useState(null);
   const [syncState,setSyncState]=useState({loading:false,msg:null});
   const [linkModal,setLinkModal]=useState(null); // { user, link } | null
@@ -1216,21 +1218,26 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
   });
   const save=async()=>{
     if(!form.first)return;
-    const subType=deriveSubType(form.isAdmin,form.tags);
-    const role=form.isAdmin?"admin":"musician";
-    const id=editing==="new"?`u${Date.now()}`:editing.id;
-    await fetch("/api/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-      id,first:form.first,last:form.last,initials:form.initials,
-      instrument:form.instrument||"",email:form.email,
-      phone:form.phone||"",color:form.color||"",
-      role,subType,isAdmin:form.isAdmin,tags:form.tags,
-      musicianId:editing==="new"?null:(editing.musicianId??null),
-      theme:editing==="new"?"dark":(editing.theme||"dark"),
-      status:editing==="new"?"pending":(editing.status||"active"),
-      ...(form.password?{password:form.password}:{}),
-    })}).catch(console.error);
-    await onUserSaved?.();
-    setEditing(null);
+    setSaving(true);
+    try{
+      const subType=deriveSubType(form.isAdmin,form.tags);
+      const role=form.isAdmin?"admin":"musician";
+      const id=editing==="new"?`u${Date.now()}`:editing.id;
+      const res=await fetch("/api/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+        id,first:form.first,last:form.last,initials:form.initials,
+        instrument:form.instrument||"",email:form.email,
+        phone:form.phone||"",color:form.color||"",
+        role,subType,isAdmin:form.isAdmin,tags:form.tags,
+        musicianId:editing==="new"?null:(editing.musicianId??null),
+        theme:editing==="new"?"dark":(editing.theme||"dark"),
+        status:editing==="new"?"pending":(editing.status||"active"),
+        ...(form.password?{password:form.password}:{}),
+      })});
+      if(!res.ok){const d=await res.json();alert("Fejl: "+(d.error||res.status));return;}
+      await onUserSaved?.();
+      setEditing(null);
+    }catch(e){alert("Netværksfejl: "+e.message);}
+    finally{setSaving(false);}
   };
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:5}}));
   const generateLink=async(u)=>{
@@ -1298,7 +1305,7 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
         <button onClick={()=>openEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}}
           onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
-        <Btn onClick={()=>setConfirmRemoveUser(u)} color={T.red} small>FJERN</Btn>
+        <Btn onClick={()=>setConfirmRemoveUser(u)} color={T.red} small disabled={deleting}>FJERN</Btn>
       </div>
     </div>
   );};
@@ -1320,7 +1327,7 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
                 {grpUsers.map(u=><SortableMusicianRow key={`${grp.key}-${u.id}`} u={u} T={T}
                   onEdit={openEdit} onDelete={setConfirmRemoveUser}
                   onGenerateLink={generateLink} onShowLink={showLink}
-                  inviteLoading={inviteLoading}/>)}
+                  inviteLoading={inviteLoading} deleting={deleting}/>)}
               </div>
             </SortableContext>
           </DndContext>
@@ -1351,15 +1358,15 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
       }} color={T.orange}>{syncState.loading?"SYNKRONISERER...":"SYNKRONISER NU →"}</Btn>
       {syncState.msg&&<div style={{marginTop:12,fontSize:12,color:syncState.msg.err?T.red:T.green,fontFamily:"'Poppins',sans-serif"}}>{syncState.msg.text}</div>}
     </div>
-    {confirmRemoveUser&&<ConfirmModal message={`Er du sikker på at du vil fjerne "${confirmRemoveUser.first} ${confirmRemoveUser.last}"? Handlingen kan ikke fortrydes.`} onConfirm={async()=>{
-      await fetch(`/api/users?id=${confirmRemoveUser.id}`,{method:"DELETE"}).catch(()=>{});
-      // Also revoke any pending invitation
-      if(confirmRemoveUser.status==="invited"){
-        // Fetch current token for this user and delete it
-        // We delete via user archive which cascades due to ON DELETE CASCADE
-      }
-      setUsers(prev=>prev.filter(x=>x.id!==confirmRemoveUser.id));
-      setConfirmRemoveUser(null);
+    {confirmRemoveUser&&<ConfirmModal message={`Er du sikker på at du vil fjerne "${confirmRemoveUser.first} ${confirmRemoveUser.last}"? Handlingen kan ikke fortrydes.`} confirmLoading={deleting} onConfirm={async()=>{
+      setDeleting(true);
+      try{
+        const res=await fetch(`/api/users?id=${confirmRemoveUser.id}`,{method:"DELETE"});
+        if(!res.ok){const d=await res.json();alert("Fejl: "+(d.error||res.status));return;}
+        setUsers(prev=>prev.filter(x=>x.id!==confirmRemoveUser.id));
+        setConfirmRemoveUser(null);
+      }catch(e){alert("Netværksfejl: "+e.message);}
+      finally{setDeleting(false);}
     }} onCancel={()=>setConfirmRemoveUser(null)} T={T}/>}
     {linkModal&&(<div style={{position:"fixed",inset:0,background:"#000c",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setLinkModal(null)}>
       <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:16,padding:28,maxWidth:500,width:"100%"}} onClick={e=>e.stopPropagation()}>
@@ -1416,7 +1423,7 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
       </div>
       <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16}}>
         <Btn onClick={()=>setEditing(null)} color={T.muted} small>ANNULLER</Btn>
-        <Btn onClick={save} color={T.orange} small>GEM</Btn>
+        <Btn onClick={save} color={T.orange} small disabled={saving}>{saving?"GEMMER...":"GEM"}</Btn>
       </div>
     </Modal>)}
   </div>);
