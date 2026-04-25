@@ -9,11 +9,13 @@ function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [activated, setActivated] = useState(false);
+  const [selfDeleted, setSelfDeleted] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
     if (searchParams.get("activated") === "1") setActivated(true);
+    if (searchParams.get("reason") === "self_deleted") setSelfDeleted(true);
   }, [searchParams]);
 
   async function handleSubmit(e) {
@@ -57,6 +59,11 @@ function LoginPage() {
         {activated && (
           <div style={{ background: "#1E7B5B22", border: "1px solid #1E7B5B55", borderRadius: 8, padding: "10px 14px", marginBottom: 20, fontSize: 13, color: "#1E7B5B", fontWeight: 600 }}>
             ✓ Konto aktiveret! Log ind med samme Google-konto for at fortsætte.
+          </div>
+        )}
+        {selfDeleted && (
+          <div style={{ fontSize: 13, color: "#8B7E74", textAlign: "center", marginBottom: 12, fontFamily: "'Inter', sans-serif" }}>
+            Din profil er arkiveret.
           </div>
         )}
         <div style={{ textAlign: "center", marginBottom: 32 }}>

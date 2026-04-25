@@ -1216,6 +1216,7 @@ function AdminView({users,setUsers,T,onReorder}){
     }
     setEditing(null);
   };
+  const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:5}}));
   const generateLink=async(u)=>{
     setInviteLoading(u.id);
     try{
@@ -1228,60 +1229,91 @@ function AdminView({users,setUsers,T,onReorder}){
     }catch(e){alert("Fejl ved generering af link: "+e.message);}
     setInviteLoading(null);
   };
+  const showLink=async(u)=>{
+    const res=await fetch("/api/invitations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id})});
+    const data=await res.json();
+    if(data.link)setLinkModal({user:u,link:data.link});
+  };
   const copyLink=(link)=>{
     navigator.clipboard.writeText(link).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
   };
+  const handleDragEnd=event=>{
+    const {active,over}=event;
+    if(!over||active.id===over.id)return;
+    const musicians=sortMusicians(users.filter(u=>u.tags?.includes("musiker")));
+    const oldIdx=musicians.findIndex(u=>u.id===active.id);
+    const newIdx=musicians.findIndex(u=>u.id===over.id);
+    if(oldIdx<0||newIdx<0)return;
+    const reordered=arrayMove(musicians,oldIdx,newIdx);
+    const orderedIds=reordered.map(u=>u.id);
+    const orderMap=new Map(orderedIds.map((id,i)=>[id,i+1]));
+    setUsers(prev=>prev.map(u=>orderMap.has(u.id)?{...u,displayOrder:orderMap.get(u.id)}:u));
+    onReorder(orderedIds);
+  };
+
   const grpDefs=[
-    {key:"owner",      label:"ADMIN / EJERE",    color:T.orange, filter:u=>u.subType==="owner"},
-    {key:"member",     label:"MUSIKERE",          color:T.green,  filter:u=>u.subType==="member"},
-    {key:"substitute", label:"VIKARER",           color:T.muted,  filter:u=>u.subType==="substitute"||u.tags?.includes("vikar")},
-    {key:"alias",      label:"ALIAS ANSVARLIGE",  color:"#4B8B9B",filter:u=>u.tags?.includes("alias_manager")},
+    {key:"owner",   label:"ADMIN / EJERE",    color:T.orange,  filter:u=>u.isAdmin,                         sortable:false},
+    {key:"musiker", label:"MUSIKERE",          color:T.green,   filter:u=>u.tags?.includes("musiker"),        sortable:true},
+    {key:"vikar",   label:"VIKARER",           color:T.muted,   filter:u=>u.tags?.includes("vikar"),          sortable:false},
+    {key:"alias",   label:"ALIAS ANSVARLIGE",  color:"#4B8B9B", filter:u=>u.tags?.includes("alias_manager"),  sortable:false},
   ];
+
+  const StaticRow=({u,grpKey})=>{const c=userColor(u);return(
+    <div key={`${grpKey}-${u.id}`} style={{background:T.dim,padding:"13px 16px",display:"flex",alignItems:"center",gap:12,borderLeft:`2px solid ${c}`}}>
+      {u.avatar?<img src={u.avatar} alt="" style={{width:34,height:34,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
+        :<div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          {u.first} {u.last}
+          {u.status==="pending"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.muted+"22",color:T.muted,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>AFVENTER</span>}
+          {u.status==="invited"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.orange+"22",color:T.orange,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>INVITERET</span>}
+        </div>
+        <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:1,display:"flex",gap:6,flexWrap:"wrap"}}>
+          {u.email?<span>{u.email}</span>:<span style={{color:T.border,fontStyle:"italic"}}>(ingen email)</span>}
+          {u.instrument&&<span>· {u.instrument}</span>}
+          {(u.tags||[]).map(t=><span key={t} style={{background:T.orange+"22",color:T.orange,padding:"1px 6px",fontSize:9,letterSpacing:"0.07em",fontWeight:700}}>{TAG_LABELS[t]||t}</span>)}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
+        {u.status==="pending"&&<button onClick={()=>generateLink(u)} disabled={inviteLoading===u.id}
+          style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em",opacity:inviteLoading===u.id?0.6:1}}>
+          {inviteLoading===u.id?"...":"🔗 LINK"}
+        </button>}
+        {u.status==="invited"&&<button onClick={()=>showLink(u)} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em"}}>🔗 LINK</button>}
+        <button onClick={()=>openEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
+        <Btn onClick={()=>setConfirmRemoveUser(u)} color={T.red} small>FJERN</Btn>
+      </div>
+    </div>
+  );};
+
   return(<div style={{maxWidth:760}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
       <div style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700}}>BRUGERE & MUSIKERE · {users.length}</div>
       <Btn onClick={openNew} color={T.orange} small>+ OPRET BRUGER</Btn>
     </div>
     {grpDefs.map(grp=>{
-      const grpUsers=users.filter(grp.filter);
+      const grpUsers=grp.sortable?sortMusicians(users.filter(grp.filter)):users.filter(grp.filter);
       if(!grpUsers.length)return null;
       return(<div key={grp.key} style={{marginBottom:20}}>
         <div style={{fontSize:9,color:grp.color,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8}}>{grp.label} · {grpUsers.length}</div>
-        <div style={{display:"flex",flexDirection:"column",gap:1,background:T.border}}>
-          {grpUsers.map(u=>{const c=userColor(u);return(<div key={`${grp.key}-${u.id}`} style={{background:T.dim,padding:"13px 16px",display:"flex",alignItems:"center",gap:12,borderLeft:`2px solid ${c}`}}>
-            {u.avatar?<img src={u.avatar} alt="" style={{width:34,height:34,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
-              :<div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>}
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                {u.first} {u.last}
-                {u.status==="pending"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.muted+"22",color:T.muted,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>AFVENTER</span>}
-                {u.status==="invited"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.orange+"22",color:T.orange,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>INVITERET</span>}
+        {grp.sortable?(
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={grpUsers.map(u=>u.id)} strategy={verticalListSortingStrategy}>
+              <div style={{display:"flex",flexDirection:"column",gap:1,background:T.border}}>
+                {grpUsers.map(u=><SortableMusicianRow key={`${grp.key}-${u.id}`} u={u} T={T}
+                  onEdit={openEdit} onDelete={setConfirmRemoveUser}
+                  onGenerateLink={generateLink} onShowLink={showLink}
+                  inviteLoading={inviteLoading}/>)}
               </div>
-              <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:1,display:"flex",gap:6,flexWrap:"wrap"}}>
-                {u.email?<span>{u.email}</span>:<span style={{color:T.border,fontStyle:"italic"}}>(ingen email)</span>}
-                {u.instrument&&<span>· {u.instrument}</span>}
-                {(u.tags||[]).map(t=><span key={t} style={{background:T.orange+"22",color:T.orange,padding:"1px 6px",fontSize:9,letterSpacing:"0.07em",fontWeight:700}}>{TAG_LABELS[t]||t}</span>)}
-              </div>
-            </div>
-            <div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
-              {u.status==="pending"&&<button onClick={()=>generateLink(u)} disabled={inviteLoading===u.id}
-                style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em",opacity:inviteLoading===u.id?0.6:1}}>
-                {inviteLoading===u.id?"...":"🔗 LINK"}
-              </button>}
-              {u.status==="invited"&&<button onClick={async()=>{
-                const res=await fetch("/api/invitations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id})});
-                const data=await res.json();
-                if(data.link)setLinkModal({user:u,link:data.link});
-              }} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em"}}>
-                🔗 LINK
-              </button>}
-              <button onClick={()=>openEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
-              <Btn onClick={()=>setConfirmRemoveUser(u)} color={T.red} small>FJERN</Btn>
-            </div>
-          </div>);})}
-        </div>
+            </SortableContext>
+          </DndContext>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:1,background:T.border}}>
+            {grpUsers.map(u=><StaticRow key={`${grp.key}-${u.id}`} u={u} grpKey={grp.key}/>)}
+          </div>
+        )}
       </div>);
     })}
     <div style={{background:T.dim,padding:22,borderRadius:12,marginTop:8}}>
@@ -1492,6 +1524,7 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
   const [avatar,setAvatar]=useState(u.avatar||null);
   const [editorSrc,setEditorSrc]=useState(null);
   const [msg,setMsg]=useState(null);const [pwMsg,setPwMsg]=useState(null);
+  const [deleteConfirm,setDeleteConfirm]=useState(false);
   const fileRef=useRef();
   const saveProfile=()=>{
     const taken=users.some(x=>x.id!==currentUser.id&&x.email===form.email);
@@ -1560,7 +1593,24 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
         })}
       </div>
     </div>
+    <div style={{background:T.dim,padding:28,borderRadius:12,border:`1px solid ${T.red}33`}}>
+      <div style={{fontSize:9,color:T.red,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:12}}>FAREOMRÅDE</div>
+      <div style={{fontSize:12,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:16,lineHeight:1.6}}>
+        Din profil arkiveres permanent. Du kan ikke fortryde dette selv.
+      </div>
+      <Btn onClick={()=>setDeleteConfirm(true)} color={T.red} small>SLET MIN PROFIL</Btn>
+    </div>
     {editorSrc&&<AvatarEditor src={editorSrc} onSave={saveAvatar} onClose={()=>setEditorSrc(null)} T={T}/>}
+    {deleteConfirm&&<ConfirmModal
+      message="Er du sikker? Din profil arkiveres og du logges ud. Kontakt admin hvis du fortryder."
+      onConfirm={async()=>{
+        await fetch(`/api/users?id=${currentUser.id}`,{method:"DELETE"}).catch(()=>{});
+        await signOut({callbackUrl:"/login?reason=self_deleted"});
+      }}
+      onCancel={()=>setDeleteConfirm(false)}
+      confirmLabel="JA, SLET MIN PROFIL"
+      T={T}
+    />}
   </div>);
 }
 
@@ -1631,6 +1681,7 @@ export default function App(){
             isAdmin:x.is_admin,
             musicianId:x.musician_id,
             tags:JSON.parse(x.tags||"[]"),
+            displayOrder:x.display_order??null,
           })));
         }
 
@@ -1742,6 +1793,16 @@ export default function App(){
     if(session)handleSetUsers(prev=>prev.map(u=>u.id===session.user.id?{...u,theme:val?"dark":"light"}:u));
   };
 
+  const handleReorder=async(orderedIds)=>{
+    try{
+      const res=await fetch("/api/users/reorder",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({ids:orderedIds})});
+      if(!res.ok){
+        const fresh=await fetch("/api/users").then(r=>r.json());
+        if(Array.isArray(fresh))setUsers(fresh.map(x=>({...x,subType:x.sub_type,isAdmin:x.is_admin,musicianId:x.musician_id,tags:JSON.parse(x.tags||"[]"),displayOrder:x.display_order??null})));
+      }
+    }catch(e){console.error("[reorder]",e);}
+  };
+
   if(status==="loading"||loading)return(
     <div style={{minHeight:"100vh",background:"#181719",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:20}}>
       <NAStar size={40} color="#D4622A"/>
@@ -1840,7 +1901,7 @@ export default function App(){
         {effectiveView==="alias"   &&<AliasView currentUser={curU} aliasData={aliasData} setAliasData={handleSetAliasData} users={users} T={T} darkMode={darkMode}/>}
         {effectiveView==="payroll" &&<PayrollView currentUser={curU} bookings={bookings} payments={payments} setPayments={handleSetPayments} users={users} T={T}/>}
         {effectiveView==="info"    &&<InfoView currentUser={curU} T={T}/>}
-        {effectiveView==="admin"   &&<AdminView users={users} setUsers={handleSetUsers} T={T}/>}
+        {effectiveView==="admin"   &&<AdminView users={users} setUsers={handleSetUsers} T={T} onReorder={handleReorder}/>}
         {effectiveView==="profile" &&<ProfileView currentUser={curU} users={users} setUsers={handleSetUsers} T={T} darkMode={darkMode} setDarkMode={handleTheme}/>}
       </div>
     </div>

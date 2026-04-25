@@ -99,7 +99,6 @@ export default function InvitationPage({ params }) {
   return (
     <Page>
       <div style={{ textAlign: "center", marginBottom: 28 }}>
-        <NAStar />
         <div style={{ fontFamily: "'Poppins',sans-serif", fontWeight: 800, fontSize: 36, color: T.white, lineHeight: 0.9, letterSpacing: "-0.01em" }}>
           NORTH<span style={{ color: T.orange }}>AVENUE</span>
         </div>
@@ -195,14 +194,6 @@ function Card({ children }) {
     <div style={{ background: T.dim, borderRadius: 16, padding: "28px", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}>
       {children}
     </div>
-  );
-}
-
-function NAStar() {
-  return (
-    <svg width="36" height="36" viewBox="0 0 32 32" style={{ marginBottom: 10 }}>
-      <polygon points="16,2 19,12 30,12 21,19 24,30 16,23 8,30 11,19 2,12 13,12" fill="#D4622A" />
-    </svg>
   );
 }
 

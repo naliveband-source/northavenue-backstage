@@ -70,6 +70,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = user.role;
         token.isAdmin = user.isAdmin;
       }
+      if (!user && token.id) {
+        const rows = await sql`SELECT archived FROM users WHERE id = ${token.id}`;
+        if (rows[0]?.archived) return null;
+      }
       return token;
     },
     async session({ session, token }) {

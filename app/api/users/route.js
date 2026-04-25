@@ -38,11 +38,13 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   const session = await auth();
-  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const isSelf = session.user.id === id;
+  if (!session.user.isAdmin && !isSelf) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-    if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
     await sql`UPDATE users SET archived = true WHERE id = ${id}`;
     return NextResponse.json({ ok: true });
   } catch (e) {
