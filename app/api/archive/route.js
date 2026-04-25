@@ -1,7 +1,10 @@
 import { sql } from "../../../lib/db";
 import { NextResponse } from "next/server";
+import { auth } from "../../auth";
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const [bookings, aliasBookings, payments, users] = await Promise.all([
       sql`SELECT * FROM bookings WHERE archived = true ORDER BY archived_at DESC`,
@@ -22,6 +25,8 @@ export async function GET() {
 }
 
 export async function POST(req) {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const { type, id, restore } = await req.json();
     if(!restore) return NextResponse.json({ error: "Only restore:true is supported" }, { status: 400 });

@@ -2,6 +2,8 @@
 // v2.1 — Design C
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 // ── Responsive hook ────────────────────────────────────────────────────────
 function useWindowWidth(){
@@ -1304,7 +1306,8 @@ function LoginScreen({onLogin,users}){
 
 // ── SHELL ──────────────────────────────────────────────────────────────────
 export default function App(){
-  const [user,setUser]=useState(null);
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [view,setView]=useState("bookings");
   const [darkMode,setDarkMode]=useState(true);
   const [bookings,setBookings]=useState(INIT_BOOKINGS);
@@ -1312,15 +1315,17 @@ export default function App(){
   const [payments,setPayments]=useState(INIT_PAYMENTS);
   const [users,setUsers]=useState(INIT_USERS);
   const [loading,setLoading]=useState(true);
-  const [loginLoading,setLoginLoading]=useState(false);
   const winW=useWindowWidth();
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
-  const logoutTimer=useRef(null);
 
-  const TIMEOUT_MS=60*60*1000;
-
-  // Load all data from database on mount + restore session
+  // Redirect to login if unauthenticated
   useEffect(()=>{
+    if(status==="unauthenticated") router.push("/login");
+  },[status,router]);
+
+  // Load all data from database on mount
+  useEffect(()=>{
+    if(status!=="authenticated") return;
     const load=async()=>{
       try{
         const [u,b,p,a]=await Promise.all([
@@ -1384,19 +1389,10 @@ export default function App(){
         console.error("Kunne ikke hente data:",e);
       }finally{
         setLoading(false);
-        // Restore session from sessionStorage
-        try{
-          const saved=sessionStorage.getItem("na_user");
-          if(saved){
-            const u=JSON.parse(saved);
-            setUser(u);
-            if(u.theme==="light")setDarkMode(false);
-          }
-        }catch(_){}
       }
     };
     load();
-  },[]);
+  },[status]);
 
   // Persist booking changes to DB
   const handleSetBookings=async(updater)=>{
@@ -1440,51 +1436,32 @@ export default function App(){
     }
   };
 
-  // Auto-logout on inactivity
-  useEffect(()=>{
-    if(!user)return;
-    const reset=()=>{
-      clearTimeout(logoutTimer.current);
-      logoutTimer.current=setTimeout(()=>{setUser(null);setView("bookings");},TIMEOUT_MS);
-    };
-    const events=["mousemove","keydown","click","touchstart","scroll"];
-    events.forEach(e=>window.addEventListener(e,reset));
-    reset();
-    return()=>{clearTimeout(logoutTimer.current);events.forEach(e=>window.removeEventListener(e,reset));};
-  },[user]);
-
   const T=darkMode?DARK:LIGHT;
-  const curU=user?users.find(u=>u.id===user.id)||user:null;
+  const curU=session?users.find(u=>u.id===session.user.id)||null:null;
+
+  // Apply theme from user profile once users are loaded
+  useEffect(()=>{
+    if(curU?.theme==="light") setDarkMode(false);
+    else if(curU?.theme==="dark") setDarkMode(true);
+  },[curU?.id, curU?.theme]);
+
   const isMobile=winW<768;
   const isTablet=winW<1400;
-
-  // Load theme from user profile on login
-  const handleLogin=u=>{
-    setLoginLoading(true);
-    setTimeout(()=>{
-      setUser(u);
-      setView("bookings");
-      if(u.theme==="light")setDarkMode(false);
-      else setDarkMode(true);
-      try{sessionStorage.setItem("na_user",JSON.stringify(u));}catch(_){}
-      setLoginLoading(false);
-    },1000);
-  };
 
   // Save theme to user profile when changed
   const handleTheme=val=>{
     setDarkMode(val);
-    if(user)handleSetUsers(prev=>prev.map(u=>u.id===user.id?{...u,theme:val?"dark":"light"}:u));
+    if(session)handleSetUsers(prev=>prev.map(u=>u.id===session.user.id?{...u,theme:val?"dark":"light"}:u));
   };
 
-  if(loading||loginLoading)return(
+  if(status==="loading"||loading)return(
     <div style={{minHeight:"100vh",background:"#181719",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:20}}>
       <NAStar size={40} color="#D4622A"/>
-      <div style={{color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",fontSize:11,letterSpacing:"0.2em"}}>{loginLoading?"LOGGER IND...":"INDLÆSER..."}</div>
+      <div style={{color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",fontSize:11,letterSpacing:"0.2em"}}>INDLÆSER...</div>
     </div>
   );
 
-  if(!curU)return <LoginScreen onLogin={handleLogin} users={users}/>;
+  if(!curU)return null;
 
   const isAdmin=curU.role==="admin";
   const isAliasOnly=!isAdmin&&curU.subType==="alias"&&!hasVikar(curU);
@@ -1533,7 +1510,7 @@ export default function App(){
       </nav>
       <div style={{padding:16,borderTop:`1px solid ${T.border}`}}>
         <div style={{fontSize:13,fontWeight:700,color:T.white,marginBottom:8}}>{curU.first} · {isAdmin?"ADMIN":isSub?"VIKAR":"MUSIKER"}</div>
-        <button onClick={()=>{setUser(null);setView("bookings");setMobileMenuOpen(false);try{sessionStorage.removeItem("na_user");}catch(_){};}} style={{width:"100%",padding:"10px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontSize:11,letterSpacing:"0.06em"}}>LOG UD</button>
+        <button onClick={()=>signOut({callbackUrl:"/login"})} style={{width:"100%",padding:"10px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontSize:11,letterSpacing:"0.06em"}}>LOG UD</button>
       </div>
     </div>)}
 
@@ -1558,7 +1535,7 @@ export default function App(){
             <div style={{fontSize:9,color:T.muted}}>{isAdmin?"ADMIN":isSub?"VIKAR":isAliasOnly?"ALIAS":"MUSIKER"}</div>
           </div>
         </div>
-        <button onClick={()=>{setUser(null);setView("bookings");try{sessionStorage.removeItem("na_user");}catch(_){};}} style={{width:"100%",padding:"7px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:6,color:T.muted,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",transition:"all .15s"}}
+        <button onClick={()=>signOut({callbackUrl:"/login"})} style={{width:"100%",padding:"7px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:6,color:T.muted,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",transition:"all .15s"}}
           onMouseEnter={e=>{e.target.style.borderColor=T.orange;e.target.style.color=T.orange;}} onMouseLeave={e=>{e.target.style.borderColor=T.border;e.target.style.color=T.muted;}}>LOG UD</button>
       </div>
     </div>)}

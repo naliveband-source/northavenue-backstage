@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { auth } from "../../../auth";
 
 const HS_TOKEN = process.env.HUBSPOT_TOKEN;
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     // Hent alle pipelines og deres stages
     const pipeRes = await fetch("https://api.hubapi.com/crm/v3/pipelines/deals", {

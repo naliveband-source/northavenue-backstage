@@ -1,7 +1,10 @@
 import { sql } from "../../../lib/db";
 import { NextResponse } from "next/server";
+import { auth } from "../../auth";
 
 export async function GET() {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const payments = await sql`SELECT * FROM payments WHERE (archived = false OR archived IS NULL) ORDER BY date`;
     return NextResponse.json(payments);
@@ -11,6 +14,8 @@ export async function GET() {
 }
 
 export async function POST(req) {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const b = await req.json();
     const payment = await sql`
@@ -27,6 +32,8 @@ export async function POST(req) {
 }
 
 export async function DELETE(req) {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

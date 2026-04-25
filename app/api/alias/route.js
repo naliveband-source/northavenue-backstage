@@ -1,7 +1,10 @@
 import { sql } from "../../../lib/db";
 import { NextResponse } from "next/server";
+import { auth } from "../../auth";
 
 export async function GET() {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const bookings = await sql`SELECT * FROM alias_bookings WHERE (archived = false OR archived IS NULL) ORDER BY date`;
     return NextResponse.json(bookings.map(b => ({
@@ -18,6 +21,8 @@ export async function GET() {
 }
 
 export async function POST(req) {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const b = await req.json();
     const booking = await sql`
@@ -38,6 +43,8 @@ export async function POST(req) {
 }
 
 export async function DELETE(req) {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const { id } = await req.json();
     await sql`UPDATE alias_bookings SET archived = true, archived_at = NOW() WHERE id = ${id}`;

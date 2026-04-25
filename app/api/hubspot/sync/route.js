@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sql } from "../../../../lib/db";
+import { auth } from "../../../auth";
 
 const HS_TOKEN = process.env.HUBSPOT_TOKEN;
 
@@ -93,6 +94,8 @@ function matchAliasManager(raw) {
 }
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if(syncInProgress) {
     return NextResponse.json({ ok: false, error: "Sync allerede i gang — prøv igen om lidt." }, { status: 429 });
   }
