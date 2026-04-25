@@ -36,11 +36,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (account?.provider === "google") {
         const rows = await sql`SELECT * FROM users WHERE email = ${user.email} AND (archived = false OR archived IS NULL)`;
         if (rows.length === 0) {
-          // No DB match — this is an invitation Google flow. Allow login to proceed;
-          // the finalize endpoint will link the account and redirect to /login.
-          // We store google identity on the user object so the jwt callback can forward it.
+          // No DB match — invitation flow. Mark so jwt callback doesn't store the
+          // NextAuth-generated UUID as token.id (finalize checks token.id === undefined).
+          user._invitationFlow = true;
           user.googleId = profile.sub;
           user.googleEmail = profile.email;
+          user.googlePicture = profile.picture;
           return true;
         }
         const dbUser = rows[0];
@@ -50,17 +51,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         user.isAdmin = dbUser.is_admin;
         user.googleId = profile.sub;
         user.googleEmail = profile.email;
+        user.googlePicture = profile.picture;
       }
       return true;
     },
     async jwt({ token, user, account, profile }) {
-      // On initial Google sign-in, forward the Google identity
       if (account?.provider === "google" && profile) {
         token.googleId = profile.sub;
         token.googleEmail = profile.email;
+        token.googlePicture = profile.picture;
       }
       if (user) {
-        token.id = user.id;         // may be undefined for invitation-flow Google login
+        // For invitation-flow Google logins user._invitationFlow is true and user.id
+        // is NextAuth's auto-generated UUID — don't store it; finalize will link later.
+        if (!user._invitationFlow) {
+          token.id = user.id;
+        }
         token.role = user.role;
         token.isAdmin = user.isAdmin;
       }
