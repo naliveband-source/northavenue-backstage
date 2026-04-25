@@ -11,4 +11,6 @@ jobs:
     steps:
       - name: Call HubSpot sync
         run: |
-          curl -sf https://backstage.northavenue.dk/api/hubspot/sync
+          curl -sf \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://backstage.northavenue.dk/api/hubspot/sync

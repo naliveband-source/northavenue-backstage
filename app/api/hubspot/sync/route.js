@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { sql } from "../../../../lib/db";
 import { auth } from "../../../auth";
+import crypto from "crypto";
+
+function isCronAuthorized(req) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    console.warn("[hubspot-sync] CRON_SECRET env var not set — cron auth disabled");
+    return false;
+  }
+  const header = req.headers.get("authorization") || "";
+  const expected = `Bearer ${secret}`;
+  if (header.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(header), Buffer.from(expected));
+}
 
 const HS_TOKEN = process.env.HUBSPOT_TOKEN;
 
@@ -93,9 +106,14 @@ function matchAliasManager(raw) {
   return null;
 }
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+export async function GET(req) {
+  if (isCronAuthorized(req)) {
+    console.log("[hubspot-sync] auth via: cron");
+  } else {
+    const session = await auth();
+    if (!session?.user?.isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    console.log("[hubspot-sync] auth via: session");
+  }
   if(syncInProgress) {
     return NextResponse.json({ ok: false, error: "Sync allerede i gang — prøv igen om lidt." }, { status: 429 });
   }
