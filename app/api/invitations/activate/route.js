@@ -3,6 +3,7 @@ import { sql } from "../../../../lib/db";
 import bcrypt from "bcryptjs";
 
 export async function POST(req) {
+  try {
   const { token, method, email, password } = await req.json();
   if (!token || !method) return NextResponse.json({ error: "token and method required" }, { status: 400 });
 
@@ -36,4 +37,8 @@ export async function POST(req) {
 
   // For google: don't mark used here — finalize endpoint handles it after OAuth
   return NextResponse.json({ error: "Unknown method" }, { status: 400 });
+  } catch (e) {
+    console.error("Invitation activate error:", e);
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
 }

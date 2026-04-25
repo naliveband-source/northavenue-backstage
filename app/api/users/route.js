@@ -18,9 +18,11 @@ export async function POST(req) {
   if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const b = await req.json();
+    const email = b.email || null;
+    const password = b.password || null;
     const user = await sql`
       INSERT INTO users (id, email, password, first, last, initials, instrument, phone, role, sub_type, is_admin, tags, theme, musician_id, color, status)
-      VALUES (${b.id}, ${b.email}, ${b.password}, ${b.first}, ${b.last}, ${b.initials}, ${b.instrument}, ${b.phone}, ${b.role}, ${b.subType}, ${b.isAdmin}, ${JSON.stringify(b.tags||[])}, ${b.theme||'dark'}, ${b.musicianId||null}, ${b.color||''}, ${b.status||'pending'})
+      VALUES (${b.id}, ${email}, ${password}, ${b.first}, ${b.last}, ${b.initials}, ${b.instrument}, ${b.phone}, ${b.role}, ${b.subType}, ${b.isAdmin}, ${JSON.stringify(b.tags||[])}, ${b.theme||'dark'}, ${b.musicianId||null}, ${b.color||''}, ${b.status||'pending'})
       ON CONFLICT (id) DO UPDATE SET
         email=EXCLUDED.email, password=EXCLUDED.password, first=EXCLUDED.first,
         last=EXCLUDED.last, initials=EXCLUDED.initials, instrument=EXCLUDED.instrument,
