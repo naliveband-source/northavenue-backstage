@@ -74,6 +74,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const rows = await sql`SELECT archived FROM users WHERE id = ${token.id}`;
         if (rows[0]?.archived) return null;
       }
+      token.exp = Math.floor(Date.now() / 1000) + (10 * 24 * 60 * 60);
       return token;
     },
     async session({ session, token }) {
@@ -85,7 +86,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 10 * 24 * 60 * 60 },
   secret: process.env.NEXTAUTH_SECRET,
   pages: { signIn: "/login" },
 });
