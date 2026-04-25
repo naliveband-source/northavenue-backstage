@@ -755,7 +755,7 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   const winW=useWindowWidth();
   const isMobile=winW<768;
   const isTablet=winW<1400;
-  const visibleBookings=isSub?bookings.filter(b=>b.substituteIds.includes(currentUser.musicianId)):bookings;
+  const visibleBookings=isAdmin?bookings:bookings.filter(b=>b.memberIds.includes(currentUser.musicianId)||b.substituteIds.includes(currentUser.musicianId));
   const filtered=useMemo(()=>visibleBookings.filter(b=>getYear(b.date)===yr),[visibleBookings,yr]);
   const [filter,setFilter]=useState("all");
   const pastCount=filtered.filter(b=>isPast(b.date)).length;
@@ -766,10 +766,10 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   const subUsers=sortMusicians(users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId));
   const getUserByMid=mid=>users.find(u=>u.musicianId===mid);
 
-  const myJobs=filtered.filter(b=>isSub?b.substituteIds.includes(currentUser.musicianId):b.memberIds.includes(currentUser.musicianId));
+  const myJobs=filtered.filter(b=>b.memberIds.includes(currentUser.musicianId)||b.substituteIds.includes(currentUser.musicianId));
   const totalBand=filtered.reduce((s,b)=>s+b.bandPay,0);
   const totalMPay=filtered.reduce((s,b)=>s+calcMusicianPay(b.bandPay),0);
-  const myEarned=isSub?myJobs.reduce((s,b)=>s+calcSubPay(calcMusicianPay(b.bandPay)),0):myJobs.reduce((s,b)=>s+calcMusicianPay(b.bandPay),0);
+  const myEarned=myJobs.reduce((s,b)=>{const inSub=b.substituteIds.includes(currentUser.musicianId)&&!b.memberIds.includes(currentUser.musicianId);return s+(inSub?calcSubPay(calcMusicianPay(b.bandPay)):calcMusicianPay(b.bandPay));},0);
 
   const [toggleErr,setToggleErr]=useState(null);
   const toggleMember=async(bid,mid)=>{
@@ -818,7 +818,7 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
         const mp=calcMusicianPay(b.bandPay);
         const sp=calcSubPay(mp);
         const pay=isSub?sp:mp;
-        const iAmIn=isSub?b.substituteIds.includes(currentUser.musicianId):b.memberIds.includes(currentUser.musicianId);
+        const iAmIn=b.memberIds.includes(currentUser.musicianId)||b.substituteIds.includes(currentUser.musicianId);
         const isMyJob=isAdmin||iAmIn;
         const br=PAY_BRACKETS.find(x=>x.pay===pay)||PAY_BRACKETS.slice(-1)[0];
         const weekday=new Date(b.date).toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
@@ -848,7 +848,7 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
               )}
               <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5}}>
                 <div style={{fontSize:isMobile?14:16,fontWeight:800,color:isAdmin?T.orange:br.color,fontFamily:"'Poppins',sans-serif"}}>{isAdmin?fmt(b.bandPay):fmt(pay)}</div>
-                {!isAdmin&&!isSub&&!past&&(
+                {!isAdmin&&!past&&b.memberIds.includes(currentUser.musicianId)&&(
                   <button onClick={e=>{e.stopPropagation();toggleMember(b.id,currentUser.musicianId);}}
                     style={{padding:"4px 10px",border:`1px solid ${toggleErr===b.id?T.red:iAmIn?T.red:T.green}`,background:iAmIn?T.red+"18":T.green+"22",color:toggleErr===b.id?T.red:iAmIn?T.red:T.green,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
                     {toggleErr===b.id?"FEJL":iAmIn?"MELD FRAVÆRENDE":"MELD PÅ"}
@@ -1027,8 +1027,8 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
 
     {displayUsers.map(u=>{
       const isOwner=u.subType==="owner";const isSubU=hasVikar(u)&&!u.isAdmin;
-      const jobs=jobsForYear.filter(b=>isSubU?b.substituteIds?.includes(u.musicianId):b.memberIds.includes(u.musicianId));
-      const earned=isOwner?jobs.length*OWNER_PAY:isSubU?jobs.reduce((s,b)=>s+calcSubPay(calcMusicianPay(b.bandPay)),0):jobs.reduce((s,b)=>s+calcMusicianPay(b.bandPay),0);
+      const jobs=jobsForYear.filter(b=>b.memberIds.includes(u.musicianId)||b.substituteIds?.includes(u.musicianId));
+      const earned=isOwner?jobs.length*OWNER_PAY:jobs.reduce((s,b)=>{const inSub=b.substituteIds?.includes(u.musicianId)&&!b.memberIds.includes(u.musicianId);return s+(inSub?calcSubPay(calcMusicianPay(b.bandPay)):calcMusicianPay(b.bandPay));},0);
       const myPay=(payments[u.musicianId]||[]).filter(p=>getYear(p.date)===yr).sort((a,b)=>new Date(a.date)-new Date(b.date));
       const paid=myPay.reduce((s,p)=>s+p.amount,0);
       const balance=earned+paid;const color=userColor(u);
@@ -1058,7 +1058,7 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
           {(!isMobile||payTab==="jobs")&&<div>
             <div style={{fontSize:9,color:T.subText,letterSpacing:"0.12em",marginBottom:8,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>JOBS · {jobs.length}</div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {jobs.map(b=>{const mp=calcMusicianPay(b.bandPay);const pay=isOwner?OWNER_PAY:isSubU?calcSubPay(mp):mp;
+              {jobs.map(b=>{const mp=calcMusicianPay(b.bandPay);const inSub=b.substituteIds?.includes(u.musicianId)&&!b.memberIds.includes(u.musicianId);const pay=isOwner?OWNER_PAY:inSub?calcSubPay(mp):mp;
                 return(<div key={b.id} style={{background:T.dim,borderRadius:8,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div><div style={{fontSize:12,color:T.cardText,fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{b.type}</div><div style={{fontSize:10,color:T.subText,marginTop:2,fontFamily:"'Poppins',sans-serif"}}>{fmtDateShort(b.date)} · {b.city}</div></div>
                   <PayBadge amount={pay}/>
