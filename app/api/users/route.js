@@ -58,9 +58,15 @@ export async function POST(req) {
         color=EXCLUDED.color
       RETURNING *`;
 
-    // Auto-enroll when tags change
+    // Auto-enroll on user create or tag change
     const savedMusId = user[0]?.musician_id;
-    if (savedMusId != null && JSON.stringify(oldTags) !== JSON.stringify(tags)) {
+    if (!oldUser && savedMusId != null) {
+      console.log('[users] calling syncEnrollment for', savedMusId, [], '→', tags);
+      await syncEnrollment(savedMusId, [], tags).catch(e =>
+        console.error('[enrollment error]', e.message)
+      );
+    } else if (oldUser && savedMusId != null && JSON.stringify(oldTags) !== JSON.stringify(tags)) {
+      console.log('[users] calling syncEnrollment for', savedMusId, oldTags, '→', tags);
       await syncEnrollment(savedMusId, oldTags, tags).catch(e =>
         console.error('[enrollment error]', e.message)
       );
