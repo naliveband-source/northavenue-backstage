@@ -1,9 +1,12 @@
 "use client";
-// v2.1 — Design C
+// v2.2 — Design C + sidebar modals + DnD reorder
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ── Responsive hook ────────────────────────────────────────────────────────
 function useWindowWidth(){
@@ -89,9 +92,13 @@ const TAG_LABELS   = {musiker:"Musiker",vikar:"Vikar",alias_manager:"Alias Ansva
 
 const hasAlias = u => u.tags?.includes("alias_manager");
 const hasVikar = u => u.subType==="substitute" || u.tags?.includes("vikar");
+const sortMusicians = arr => [...arr].sort((a,b)=>{
+  const ao=a.displayOrder??Infinity; const bo=b.displayOrder??Infinity;
+  return ao!==bo?ao-bo:(a.id<b.id?-1:1);
+});
 
 // ── ConfirmModal ───────────────────────────────────────────────────────────
-function ConfirmModal({message,onConfirm,onCancel,T}){
+function ConfirmModal({message,onConfirm,onCancel,T,confirmLabel="JA, FJERN"}){
   return(
     <div style={{position:"fixed",inset:0,background:"#000e",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onCancel}>
       <div style={{background:T.dim,border:`1px solid ${T.red}55`,padding:28,minWidth:320,maxWidth:420,boxShadow:"0 16px 48px #0009"}} onClick={e=>e.stopPropagation()}>
@@ -99,7 +106,7 @@ function ConfirmModal({message,onConfirm,onCancel,T}){
         <p style={{fontSize:13,color:T.muted,fontFamily:"'Poppins',sans-serif",lineHeight:1.7,marginBottom:20}}>{message}</p>
         <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
           <Btn onClick={onCancel} color={T.muted} small>ANNULLER</Btn>
-          <Btn onClick={onConfirm} color={T.red} small>JA, FJERN</Btn>
+          <Btn onClick={onConfirm} color={T.red} small>{confirmLabel}</Btn>
         </div>
       </div>
     </div>
@@ -109,9 +116,10 @@ function ConfirmModal({message,onConfirm,onCancel,T}){
 // ── Job Detail Popup (ticket style) ───────────────────────────────────────
 function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
   const isMobile=useWindowWidth()<768;
+  const [chipProfile,setChipProfile]=useState(null);
   const mp=calcMusicianPay(booking.bandPay);
   const sp=calcSubPay(mp);
-  const memberUsers=users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias");
+  const memberUsers=sortMusicians(users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias"));
   const stubColor=PAY_BRACKETS.find(x=>x.pay===mp)?.color||T.orange;
   const stubAmount=isAdmin?booking.bandPay:isSub?sp:mp;
   const stubLabel=isAdmin?"BELØB":"DIN LØN";
@@ -122,17 +130,19 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
 
   const Fld=({label,value,span=1,color=T.white})=>(
     <div style={{gridColumn:`span ${span}`}}>
-      <div style={{fontSize:8,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
-      <div style={{fontSize:11,color,fontWeight:700,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
+      <div style={{fontSize:12,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
+      <div style={{fontSize:14,color,fontWeight:700,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
     </div>
   );
+
+  const openChip=(e,u)=>{e.stopPropagation();setChipProfile(u);};
 
   const MusicianChips=()=>(<>
     <div style={{fontSize:9,color:T.subText,letterSpacing:"0.1em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8}}>MUSIKERE</div>
     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:booking.substituteIds?.length>0?10:0}}>
       {memberUsers.map(u=>{
         const isIn=booking.memberIds.includes(u.musicianId);const c=userColor(u);
-        return(<div key={u.id} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:isIn?c+"18":T.dim,border:`1px solid ${isIn?c+"44":T.border}`,borderRadius:20,opacity:isIn?1:0.45}}>
+        return(<div key={u.id} onClick={e=>openChip(e,u)} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:isIn?c+"18":T.dim,border:`1px solid ${isIn?c+"44":T.border}`,borderRadius:20,opacity:isIn?1:0.45,cursor:"pointer"}}>
           <span style={{width:16,height:16,background:c+"22",border:`1px solid ${c}`,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
           <span style={{fontSize:11,color:isIn?T.white:T.subText,fontFamily:"'Poppins',sans-serif",fontWeight:isIn?600:400}}>{u.first}</span>
         </div>);
@@ -143,7 +153,7 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
         {booking.substituteIds.map(mid=>{
           const u=users.find(x=>x.musicianId===mid);if(!u)return null;const c=userColor(u);
-          return(<div key={mid} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:c+"18",border:`1px solid ${c+"44"}`,borderRadius:20}}>
+          return(<div key={mid} onClick={e=>openChip(e,u)} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:c+"18",border:`1px solid ${c+"44"}`,borderRadius:20,cursor:"pointer"}}>
             <span style={{width:16,height:16,background:c+"22",border:`1px solid ${c}`,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
             <span style={{fontSize:11,color:T.white,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{u.first}</span>
             <span style={{fontSize:8,color:T.orange,background:T.orange+"18",padding:"1px 5px",borderRadius:3,fontFamily:"'Poppins',sans-serif",fontWeight:700}}>VIKAR</span>
@@ -153,11 +163,32 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
     </>)}
   </>);
 
+  if(typeof document==="undefined") return null;
+
+  const profilePopup=chipProfile?createPortal(
+    <div style={{position:"fixed",inset:0,background:"#000d",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setChipProfile(null)}>
+      <div style={{background:"#1E1C1D",border:`1px solid ${userColor(chipProfile)}55`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:18}}>
+          {chipProfile.avatar?<img src={chipProfile.avatar} alt="" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:`2px solid ${userColor(chipProfile)}`}}/>
+            :<div style={{width:52,height:52,background:userColor(chipProfile)+"22",border:`2px solid ${userColor(chipProfile)}`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:userColor(chipProfile),fontFamily:"'Poppins',sans-serif"}}>{chipProfile.initials}</div>}
+          <div>
+            <div style={{fontSize:17,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{chipProfile.first} {chipProfile.last}</div>
+            <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginTop:3}}>{chipProfile.instrument||"–"}</div>
+          </div>
+        </div>
+        {chipProfile.phone&&<div style={{display:"flex",gap:10,marginBottom:6}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{chipProfile.phone}</span></div>}
+        <div style={{display:"flex",gap:10,marginBottom:6}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{chipProfile.email}</span></div>
+        {(chipProfile.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>{(chipProfile.tags||[]).map(t=><span key={t} style={{background:"#D4622A22",color:"#D4622A",padding:"2px 8px",borderRadius:4,fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.07em"}}>{TAG_LABELS[t]||t}</span>)}</div>}
+        <button onClick={()=>setChipProfile(null)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"1px solid #2E2B2C",borderRadius:8,color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.08em"}}>LUK</button>
+      </div>
+    </div>,
+    document.body
+  ):null;
+
   if(!isMobile){
-    return typeof document!=="undefined"?createPortal(
+    return(<>{createPortal(
       <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
         <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:16,overflow:"hidden",display:"flex",width:600,maxWidth:"94vw",maxHeight:"90vh",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
-          {/* Stub */}
           <div style={{width:120,background:stubColor,padding:"24px 18px",display:"flex",flexDirection:"column",justifyContent:"space-between",flexShrink:0}}>
             <div>
               <div style={{fontSize:9,color:"#F8F5E6",letterSpacing:"0.12em",fontWeight:700,fontFamily:"'Poppins',sans-serif",opacity:0.85,marginBottom:2}}>{weekday}</div>
@@ -170,16 +201,14 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
               <div style={{fontSize:8,color:"#F8F5E6",opacity:0.75,fontFamily:"'Poppins',sans-serif"}}>kr.</div>
             </div>
           </div>
-          {/* Perforation */}
           <div style={{width:2,background:T.black,display:"flex",flexDirection:"column",justifyContent:"space-around",alignItems:"center",flexShrink:0}}>
             {[0,1,2,3,4].map(i=><div key={i} style={{width:8,height:8,background:T.black,border:`1px solid ${T.border}`,borderRadius:"50%"}}/>)}
           </div>
-          {/* Content */}
           <div style={{flex:1,padding:"20px 22px",position:"relative",overflowY:"auto"}}>
             <button onClick={onClose} style={{position:"absolute",top:14,right:16,background:"none",border:"none",color:T.subText,cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
             <div style={{fontSize:9,color:stubColor,letterSpacing:"0.14em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NORTH AVENUE</div>
             <div style={{fontSize:21,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",lineHeight:1.1,paddingRight:28,marginBottom:4}}>{booking.type}</div>
-            <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
+            <div style={{fontSize:12,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
             <div style={{display:"grid",gridTemplateColumns:isAdmin?"repeat(3,1fr)":"repeat(4,1fr)",gap:"10px 16px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
               {!isAdmin&&<Fld label="AFGANG" value={booking.departure}/>}
               <Fld label="ANKOMST" value={booking.arrival}/>
@@ -191,18 +220,18 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
               <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
             </div>
             {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
-              <div style={{fontSize:8,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
-              <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
+              <div style={{fontSize:10,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
+              <div style={{fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
             </div>}
             <MusicianChips/>
           </div>
         </div>
       </div>,
       document.body
-    ):null;
+    )}{profilePopup}</>);
   }
 
-  return typeof document!=="undefined"?createPortal(
+  return(<>{createPortal(
     <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"flex-end"}} onClick={onClose}>
       <div style={{background:T.dim,border:`1px solid ${T.border}`,borderRadius:"16px 16px 0 0",width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{background:stubColor,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -219,7 +248,7 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
         <div style={{padding:"16px 18px 28px",position:"relative"}}>
           <button onClick={onClose} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:T.subText,cursor:"pointer",fontSize:22,lineHeight:1,padding:0}}>×</button>
           <div style={{fontSize:9,color:stubColor,letterSpacing:"0.14em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NORTH AVENUE</div>
-          <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
+          <div style={{fontSize:12,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:14}}>{[booking.city,booking.address].filter(Boolean).join(" · ")}</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:14}}>
             {!isAdmin&&<Fld label="AFGANG" value={booking.departure}/>}
             <Fld label="ANKOMST" value={booking.arrival}/>
@@ -228,13 +257,13 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
             {isAdmin&&<Fld label="MUSIKER LØN" value={`${fmt(mp)} kr.`} color={stubColor}/>}
             <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" span={2}/>
           </div>
-          {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
+          {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
           <MusicianChips/>
         </div>
       </div>
     </div>,
     document.body
-  ):null;
+  )}{profilePopup}</>);
 }
 
 // ── Alias Job Detail Popup (ticket style) ─────────────────────────────────
@@ -251,8 +280,8 @@ function AliasDetailPopup({booking,T,onClose}){
 
   const Fld=({label,value,span=1,color=T.white})=>(
     <div style={{gridColumn:`span ${span}`}}>
-      <div style={{fontSize:8,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
-      <div style={{fontSize:11,color,fontWeight:700,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
+      <div style={{fontSize:12,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
+      <div style={{fontSize:14,color,fontWeight:700,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
     </div>
   );
 
@@ -298,8 +327,8 @@ function AliasDetailPopup({booking,T,onClose}){
               <Fld label="TELEFON" value={booking.phone}/>
             </div>
             {booking.notes&&<div style={{padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
-              <div style={{fontSize:8,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
-              <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
+              <div style={{fontSize:10,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
+              <div style={{fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
             </div>}
           </div>
         </div>
@@ -336,7 +365,7 @@ function AliasDetailPopup({booking,T,onClose}){
             <Fld label="KONTAKTPERSON" value={booking.contact} span={2}/>
             <Fld label="TELEFON" value={booking.phone}/>
           </div>
-          {booking.notes&&<div style={{padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
+          {booking.notes&&<div style={{padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
         </div>
       </div>
     </div>,
@@ -459,33 +488,51 @@ function NotePopup({note,T}){
   </>);
 }
 
-// ── Booking Edit Modal ─────────────────────────────────────────────────────
+// ── Underline inputs for sidebar modals ───────────────────────────────────
+function UlField({label,children,T}){
+  return(<div style={{marginBottom:20}}>
+    <div style={{fontSize:9,color:T.muted,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:4,textTransform:"uppercase"}}>{label}</div>
+    {children}
+  </div>);
+}
+function UlInp({value,onChange,type="text",placeholder="",T}){
+  return <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+    style={{width:"100%",background:"transparent",border:"none",borderBottom:`1px solid ${T.border}`,outline:"none",color:T.white,fontSize:15,fontFamily:"'Poppins',sans-serif",padding:"6px 0",boxSizing:"border-box"}}/>;
+}
+
+// ── Booking Edit Modal (sidebar design) ───────────────────────────────────
 function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
   const [form,setForm]=useState({...booking,bandPay:String(booking.bandPay)});
+  const [section,setSection]=useState("detaljer");
   const [askDel,setAskDel]=useState(false);
-  const memberUsers=users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias");
-  const subUsers   =users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId);
+  const winW=useWindowWidth();
+  const isMobile=winW<768;
+  const memberUsers=sortMusicians(users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias"));
+  const subUsers=users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId);
   const toggleMember=mid=>setForm(p=>{const has=p.memberIds.includes(mid);return{...p,memberIds:has?p.memberIds.filter(x=>x!==mid):[...p.memberIds,mid]};});
-  const toggleSub   =mid=>setForm(p=>{const has=p.substituteIds.includes(mid);return{...p,substituteIds:has?p.substituteIds.filter(x=>x!==mid):[...p.substituteIds,mid]};});
+  const toggleSub=mid=>setForm(p=>{const has=p.substituteIds.includes(mid);return{...p,substituteIds:has?p.substituteIds.filter(x=>x!==mid):[...p.substituteIds,mid]};});
+  const dateStr=booking.date?new Date(booking.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"}):"";
+  const SECS=[{id:"detaljer",label:"Detaljer"},{id:"bemanding",label:"Bemanding"},{id:"note",label:"Note"},{id:"historik",label:"Historik"}];
+
   if(askDel)return <ConfirmModal message="Dette job vil blive fjernet permanent." onConfirm={onDelete} onCancel={()=>setAskDel(false)} T={T}/>;
-  return(<Modal title={`REDIGER JOB · ${booking.type}`} onClose={onClose} T={T} wide>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
-      <Field label="DATO" T={T}><Inp value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))} type="date" T={T}/></Field>
-      <Field label="JOB TYPE" T={T}><Inp value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value}))} T={T}/></Field>
-      <Field label="BY" T={T}><Inp value={form.city} onChange={e=>setForm(p=>({...p,city:e.target.value}))} T={T}/></Field>
-      <Field label="ADRESSE" T={T}><Inp value={form.address||""} onChange={e=>setForm(p=>({...p,address:e.target.value}))} T={T}/></Field>
-      <Field label="AFGANG" T={T}><Inp value={form.departure||""} onChange={e=>setForm(p=>({...p,departure:e.target.value}))} placeholder="17:00" T={T}/></Field>
-      <Field label="ANKOMST" T={T}><Inp value={form.arrival||""} onChange={e=>setForm(p=>({...p,arrival:e.target.value}))} placeholder="18:30" T={T}/></Field>
-      <Field label="SPILLETID" T={T}><Inp value={form.playTime||""} onChange={e=>setForm(p=>({...p,playTime:e.target.value}))} placeholder="21:00–23:30" T={T}/></Field>
-      <Field label="SÆT" T={T}><Inp value={form.sets||""} onChange={e=>setForm(p=>({...p,sets:e.target.value}))} T={T}/></Field>
-      <Field label="BELØB (kr)" T={T}><Inp value={form.bandPay} onChange={e=>setForm(p=>({...p,bandPay:e.target.value}))} type="number" T={T}/></Field>
-      <Field label="BOOKER" T={T}><Inp value={form.booker||""} onChange={e=>setForm(p=>({...p,booker:e.target.value}))} T={T}/></Field>
-    </div>
-    <Field label="NOTE" T={T}>
-      <textarea value={form.notes||""} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}
-        style={{width:"100%",padding:"10px 12px",background:T.black,border:`1px solid ${T.border}`,color:T.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"'Poppins',sans-serif",borderRadius:0,resize:"vertical",minHeight:60}}/>
-    </Field>
-    <div style={{marginBottom:16}}>
+  if(typeof document==="undefined") return null;
+
+  const renderSection=()=>{
+    if(section==="detaljer") return(
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 24px"}}>
+        <UlField label="DATO" T={T}><UlInp value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))} type="date" T={T}/></UlField>
+        <UlField label="JOB TYPE" T={T}><UlInp value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value}))} T={T}/></UlField>
+        <UlField label="BY" T={T}><UlInp value={form.city} onChange={e=>setForm(p=>({...p,city:e.target.value}))} T={T}/></UlField>
+        <UlField label="ADRESSE" T={T}><UlInp value={form.address||""} onChange={e=>setForm(p=>({...p,address:e.target.value}))} T={T}/></UlField>
+        <UlField label="AFGANG" T={T}><UlInp value={form.departure||""} onChange={e=>setForm(p=>({...p,departure:e.target.value}))} placeholder="17:00" T={T}/></UlField>
+        <UlField label="ANKOMST" T={T}><UlInp value={form.arrival||""} onChange={e=>setForm(p=>({...p,arrival:e.target.value}))} placeholder="18:30" T={T}/></UlField>
+        <UlField label="SPILLETID" T={T}><UlInp value={form.playTime||""} onChange={e=>setForm(p=>({...p,playTime:e.target.value}))} placeholder="21:00–23:30" T={T}/></UlField>
+        <UlField label="SÆT" T={T}><UlInp value={form.sets||""} onChange={e=>setForm(p=>({...p,sets:e.target.value}))} T={T}/></UlField>
+        <UlField label="BELØB (kr)" T={T}><UlInp value={form.bandPay} onChange={e=>setForm(p=>({...p,bandPay:e.target.value}))} type="number" T={T}/></UlField>
+        <UlField label="BOOKER" T={T}><UlInp value={form.booker||""} onChange={e=>setForm(p=>({...p,booker:e.target.value}))} T={T}/></UlField>
+      </div>
+    );
+    if(section==="bemanding") return(<div>
       <div style={{fontSize:9,color:T.orange,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:10}}>MUSIKERE</div>
       {memberUsers.map(u=>{const isIn=form.memberIds.includes(u.musicianId);const c=userColor(u);
         return(<div key={u.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 12px",marginBottom:4,background:T.black,border:`1px solid ${isIn?c+"44":T.border}`}}>
@@ -496,9 +543,7 @@ function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
           <button onClick={()=>toggleMember(u.musicianId)} style={{padding:"4px 10px",border:`1px solid ${isIn?T.green:T.red}`,background:isIn?T.green+"22":T.red+"18",color:isIn?T.green:T.red,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{isIn?"MED ✓":"FRAVÆRENDE"}</button>
         </div>);
       })}
-    </div>
-    <div style={{marginBottom:20}}>
-      <div style={{fontSize:9,color:T.muted,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:10}}>VIKARER</div>
+      <div style={{fontSize:9,color:T.muted,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:10,marginTop:16}}>VIKARER</div>
       {subUsers.map(u=>{const isIn=form.substituteIds.includes(u.musicianId);const c=userColor(u);
         return(<div key={u.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 12px",marginBottom:4,background:T.black,border:`1px solid ${isIn?c+"44":T.border}`}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -508,15 +553,198 @@ function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
           <button onClick={()=>toggleSub(u.musicianId)} style={{padding:"4px 10px",border:`1px solid ${isIn?T.green:T.border}`,background:isIn?T.green+"22":"transparent",color:isIn?T.green:T.muted,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{isIn?"MED ✓":"TILFØJ"}</button>
         </div>);
       })}
+    </div>);
+    if(section==="note") return(<UlField label="NOTE" T={T}>
+      <textarea value={form.notes||""} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}
+        style={{width:"100%",background:"transparent",border:"none",borderBottom:`1px solid ${T.border}`,outline:"none",color:T.white,fontSize:14,fontFamily:"'Poppins',sans-serif",padding:"6px 0",boxSizing:"border-box",resize:"vertical",minHeight:120,display:"block"}}/>
+    </UlField>);
+    return(<div style={{color:T.border,fontFamily:"'Poppins',sans-serif",fontSize:12,padding:"20px 0"}}>Ingen ændringer endnu.</div>);
+  };
+
+  const sidebar=(sideW)=>(
+    <div style={{width:sideW,background:T.black,display:"flex",flexDirection:"column",flexShrink:0}}>
+      <div style={{padding:"24px 20px 16px"}}>
+        <div style={{fontSize:14,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",lineHeight:1.2}}>{booking.type}</div>
+        <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:4}}>{dateStr}{booking.city?` · ${booking.city}`:""}</div>
+      </div>
+      <nav style={{padding:"0 12px",flex:1}}>
+        {SECS.map(s=>(<button key={s.id} onClick={()=>setSection(s.id)}
+          style={{display:"block",width:"100%",textAlign:"left",padding:"8px 12px",marginBottom:2,background:section===s.id?T.orange:"transparent",borderRadius:8,border:"none",color:section===s.id?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:12,fontWeight:section===s.id?700:400,transition:"all .15s"}}>
+          {s.label}
+        </button>))}
+      </nav>
+      <div style={{padding:"16px 20px",borderTop:`1px solid ${T.border}55`}}>
+        <div style={{fontSize:9,color:T.muted,fontFamily:"'Poppins',sans-serif",lineHeight:1.6}}>Ændringer gemmes når du klikker GEM</div>
+      </div>
     </div>
-    <div style={{display:"flex",justifyContent:"space-between"}}>
+  );
+
+  const footer=(
+    <div style={{padding:"14px 24px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",background:T.dim,flexShrink:0}}>
       <Btn onClick={()=>setAskDel(true)} color={T.red} small>FJERN JOB</Btn>
       <div style={{display:"flex",gap:8}}>
         <Btn onClick={onClose} color={T.muted} small>ANNULLER</Btn>
-        <Btn onClick={()=>onSave({...form,bandPay:parseFloat(form.bandPay)||0})} color={T.orange} small>GEM ÆNDRINGER</Btn>
+        <Btn onClick={()=>onSave({...form,bandPay:parseFloat(form.bandPay)||0})} color={T.orange} small>GEM</Btn>
       </div>
     </div>
-  </Modal>);
+  );
+
+  if(isMobile){
+    return createPortal(
+      <div style={{position:"fixed",inset:0,background:"#000d",zIndex:200,display:"flex",alignItems:"flex-end"}}>
+        <div style={{background:T.dim,width:"100%",maxHeight:"95vh",display:"flex",flexDirection:"column",borderRadius:"16px 16px 0 0"}} onClick={e=>e.stopPropagation()}>
+          <div style={{display:"flex",overflowX:"auto",borderBottom:`1px solid ${T.border}`,padding:"0 4px",flexShrink:0}}>
+            {SECS.map(s=>(<button key={s.id} onClick={()=>setSection(s.id)}
+              style={{padding:"14px 18px",background:"transparent",border:"none",borderBottom:section===s.id?`2px solid ${T.orange}`:"2px solid transparent",color:section===s.id?T.orange:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:section===s.id?700:400,letterSpacing:"0.08em",whiteSpace:"nowrap",flexShrink:0}}>
+              {s.label}
+            </button>))}
+          </div>
+          <div style={{padding:"16px 20px 0",flexShrink:0}}>
+            <div style={{fontSize:16,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{booking.type}</div>
+            <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{dateStr}{booking.city?` · ${booking.city}`:""}</div>
+          </div>
+          <div style={{flex:1,overflowY:"auto",padding:20}}>{renderSection()}</div>
+          {footer}
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+  const sideW=winW>=1024?180:160;
+  return createPortal(
+    <div style={{position:"fixed",inset:0,background:"#000d",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
+      <div style={{background:T.dim,width:winW>=1024?800:"90vw",maxWidth:"96vw",maxHeight:"90vh",display:"flex",flexDirection:"column",borderRadius:16,overflow:"hidden",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",flex:1,minHeight:0}}>
+          {sidebar(sideW)}
+          <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
+            <div style={{flex:1,overflowY:"auto",padding:"28px 32px"}}>{renderSection()}</div>
+            {footer}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ── Alias Edit Modal (sidebar design) ─────────────────────────────────────
+function AliasEditModal({booking,onSave,onDelete,onClose,T}){
+  const [form,setForm]=useState({...booking,bandPay:String(booking.bandPay),bookingFee:String(booking.bookingFee||"")});
+  const [section,setSection]=useState("detaljer");
+  const [askDel,setAskDel]=useState(false);
+  const winW=useWindowWidth();
+  const isMobile=winW<768;
+  const dateStr=booking.date?new Date(booking.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"}):"";
+  const SECS=[{id:"detaljer",label:"Detaljer"},{id:"ansvarlig",label:"Ansvarlig"},{id:"note",label:"Note"},{id:"historik",label:"Historik"}];
+
+  if(askDel)return <ConfirmModal message="Dette alias-job vil blive fjernet permanent og kan ikke fortrydes." onConfirm={onDelete} onCancel={()=>setAskDel(false)} T={T}/>;
+  if(typeof document==="undefined") return null;
+
+  const renderSection=()=>{
+    if(section==="detaljer") return(
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 24px"}}>
+        <UlField label="DATO" T={T}><UlInp value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))} type="date" T={T}/></UlField>
+        <UlField label="JOB TYPE" T={T}><UlInp value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value}))} T={T}/></UlField>
+        <UlField label="BY" T={T}><UlInp value={form.city} onChange={e=>setForm(p=>({...p,city:e.target.value}))} T={T}/></UlField>
+        <UlField label="ADRESSE" T={T}><UlInp value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))} T={T}/></UlField>
+        <UlField label="ANKOMST" T={T}><UlInp value={form.arrival} onChange={e=>setForm(p=>({...p,arrival:e.target.value}))} T={T}/></UlField>
+        <UlField label="SPILLETID" T={T}><UlInp value={form.playTime} onChange={e=>setForm(p=>({...p,playTime:e.target.value}))} T={T}/></UlField>
+        <UlField label="SÆT" T={T}><UlInp value={form.sets} onChange={e=>setForm(p=>({...p,sets:e.target.value}))} T={T}/></UlField>
+        <UlField label="BEMANDING" T={T}><UlInp value={String(form.musicians||"")} onChange={e=>setForm(p=>({...p,musicians:e.target.value}))} type="number" T={T}/></UlField>
+        <UlField label="BELØB (kr)" T={T}><UlInp value={form.bandPay} onChange={e=>setForm(p=>({...p,bandPay:e.target.value}))} type="number" T={T}/></UlField>
+        <UlField label="BOOKING (kr)" T={T}><UlInp value={form.bookingFee} onChange={e=>setForm(p=>({...p,bookingFee:e.target.value}))} type="number" T={T}/></UlField>
+        <UlField label="BIL + GEAR" T={T}>
+          <select value={form.carGear?"ja":"nej"} onChange={e=>setForm(p=>({...p,carGear:e.target.value==="ja"}))}
+            style={{width:"100%",background:"transparent",border:"none",borderBottom:`1px solid ${T.border}`,outline:"none",color:T.white,fontSize:15,fontFamily:"'Poppins',sans-serif",padding:"6px 0",cursor:"pointer"}}>
+            <option value="ja" style={{background:"#181719"}}>Ja</option><option value="nej" style={{background:"#181719"}}>Nej</option>
+          </select>
+        </UlField>
+      </div>
+    );
+    if(section==="ansvarlig") return(
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 24px"}}>
+        <UlField label="ARRANGØR" T={T}><UlInp value={form.contact} onChange={e=>setForm(p=>({...p,contact:e.target.value}))} T={T}/></UlField>
+        <UlField label="TELEFON" T={T}><UlInp value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} T={T}/></UlField>
+        <UlField label="BOOKER (fra HubSpot)" T={T}>
+          <div style={{fontSize:15,color:T.muted,fontFamily:"'Poppins',sans-serif",padding:"6px 0",borderBottom:`1px solid ${T.border}44`}}>{form.booker||"–"}</div>
+        </UlField>
+      </div>
+    );
+    if(section==="note") return(<UlField label="NOTE" T={T}>
+      <textarea value={form.notes||""} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}
+        style={{width:"100%",background:"transparent",border:"none",borderBottom:`1px solid ${T.border}`,outline:"none",color:T.white,fontSize:14,fontFamily:"'Poppins',sans-serif",padding:"6px 0",boxSizing:"border-box",resize:"vertical",minHeight:120,display:"block"}}/>
+    </UlField>);
+    return(<div style={{color:T.border,fontFamily:"'Poppins',sans-serif",fontSize:12,padding:"20px 0"}}>Ingen ændringer endnu.</div>);
+  };
+
+  const doSave=()=>onSave({...form,bandPay:parseFloat(form.bandPay)||0,bookingFee:parseFloat(form.bookingFee)||0,carGear:form.carGear===true||form.carGear==="ja",musicians:parseInt(form.musicians)||0});
+
+  const sidebar=(sideW)=>(
+    <div style={{width:sideW,background:T.black,display:"flex",flexDirection:"column",flexShrink:0}}>
+      <div style={{padding:"24px 20px 16px"}}>
+        <div style={{fontSize:14,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",lineHeight:1.2}}>{booking.type}</div>
+        <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:4}}>{dateStr}{booking.city?` · ${booking.city}`:""}</div>
+      </div>
+      <nav style={{padding:"0 12px",flex:1}}>
+        {SECS.map(s=>(<button key={s.id} onClick={()=>setSection(s.id)}
+          style={{display:"block",width:"100%",textAlign:"left",padding:"8px 12px",marginBottom:2,background:section===s.id?T.orange:"transparent",borderRadius:8,border:"none",color:section===s.id?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:12,fontWeight:section===s.id?700:400,transition:"all .15s"}}>
+          {s.label}
+        </button>))}
+      </nav>
+      <div style={{padding:"16px 20px",borderTop:`1px solid ${T.border}55`}}>
+        <div style={{fontSize:9,color:T.muted,fontFamily:"'Poppins',sans-serif",lineHeight:1.6}}>Ændringer gemmes når du klikker GEM</div>
+      </div>
+    </div>
+  );
+
+  const footer=(
+    <div style={{padding:"14px 24px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",background:T.dim,flexShrink:0}}>
+      <Btn onClick={()=>setAskDel(true)} color={T.red} small>FJERN JOB</Btn>
+      <div style={{display:"flex",gap:8}}>
+        <Btn onClick={onClose} color={T.muted} small>ANNULLER</Btn>
+        <Btn onClick={doSave} color={T.orange} small>GEM</Btn>
+      </div>
+    </div>
+  );
+
+  if(isMobile){
+    return createPortal(
+      <div style={{position:"fixed",inset:0,background:"#000d",zIndex:200,display:"flex",alignItems:"flex-end"}}>
+        <div style={{background:T.dim,width:"100%",maxHeight:"95vh",display:"flex",flexDirection:"column",borderRadius:"16px 16px 0 0"}} onClick={e=>e.stopPropagation()}>
+          <div style={{display:"flex",overflowX:"auto",borderBottom:`1px solid ${T.border}`,padding:"0 4px",flexShrink:0}}>
+            {SECS.map(s=>(<button key={s.id} onClick={()=>setSection(s.id)}
+              style={{padding:"14px 18px",background:"transparent",border:"none",borderBottom:section===s.id?`2px solid ${T.orange}`:"2px solid transparent",color:section===s.id?T.orange:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:section===s.id?700:400,letterSpacing:"0.08em",whiteSpace:"nowrap",flexShrink:0}}>
+              {s.label}
+            </button>))}
+          </div>
+          <div style={{padding:"16px 20px 0",flexShrink:0}}>
+            <div style={{fontSize:16,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{booking.type}</div>
+            <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{dateStr}{booking.city?` · ${booking.city}`:""}</div>
+          </div>
+          <div style={{flex:1,overflowY:"auto",padding:20}}>{renderSection()}</div>
+          {footer}
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+  const sideW=winW>=1024?180:160;
+  return createPortal(
+    <div style={{position:"fixed",inset:0,background:"#000d",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
+      <div style={{background:T.dim,width:winW>=1024?800:"90vw",maxWidth:"96vw",maxHeight:"90vh",display:"flex",flexDirection:"column",borderRadius:16,overflow:"hidden",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",flex:1,minHeight:0}}>
+          {sidebar(sideW)}
+          <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
+            <div style={{flex:1,overflowY:"auto",padding:"28px 32px"}}>{renderSection()}</div>
+            {footer}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 // ── BOOKINGS ───────────────────────────────────────────────────────────────
@@ -536,8 +764,8 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   const upcomingCount=filtered.length-pastCount;
   const visible=filtered.filter(b=>{if(filter==="upcoming")return !isPast(b.date);if(filter==="past")return isPast(b.date);return true;});
 
-  const memberUsers=users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias");
-  const subUsers=users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId);
+  const memberUsers=sortMusicians(users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias"));
+  const subUsers=sortMusicians(users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId));
   const getUserByMid=mid=>users.find(u=>u.musicianId===mid);
 
   const myJobs=filtered.filter(b=>isSub?b.substituteIds.includes(currentUser.musicianId):b.memberIds.includes(currentUser.musicianId));
@@ -649,8 +877,6 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
   const [yr,setYr]=useState(CUR_YEAR);
   const [detailBooking,setDetailBooking]=useState(null);
   const [editModal,setEditModal]=useState(null);
-  const [editForm,setEditForm]=useState({});
-  const [confirmDel,setConfirmDel]=useState(null);
 
   const managerBookings=useMemo(()=>(aliasData[selManager]||[]).filter(b=>getYear(b.date)===yr).sort((a,b)=>new Date(a.date)-new Date(b.date)),[aliasData,selManager,yr]);
   const [filter,setFilter]=useState("all");
@@ -660,13 +886,11 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
   const totalPay=managerBookings.reduce((s,b)=>s+b.bandPay,0);
   const totalBook=managerBookings.reduce((s,b)=>s+(b.bookingFee||0),0);
 
-  const openEdit=b=>{setEditForm({...b,bandPay:String(b.bandPay),bookingFee:String(b.bookingFee||"")});setEditModal(b);};
-  const saveEdit=()=>{
-    const updated={...editForm,bandPay:parseFloat(editForm.bandPay)||0,bookingFee:parseFloat(editForm.bookingFee)||0,carGear:editForm.carGear===true||editForm.carGear==="ja"};
-    setAliasData(prev=>({...prev,[selManager]:(prev[selManager]||[]).map(b=>b.id===editModal.id?updated:b)}));
+  const saveEdit=updated=>{
+    setAliasData(prev=>({...prev,[selManager]:(prev[selManager]||[]).map(b=>b.id===updated.id?updated:b)}));
     setEditModal(null);
   };
-  const doDelete=id=>{setAliasData(prev=>({...prev,[selManager]:(prev[selManager]||[]).filter(b=>b.id!==id)}));setConfirmDel(null);setEditModal(null);};
+  const doDelete=id=>{setAliasData(prev=>({...prev,[selManager]:(prev[selManager]||[]).filter(b=>b.id!==id)}));setEditModal(null);};
 
   const oA=darkMode?"#D4622A":"#C4521F";
   const hd={padding:"9px 12px",textAlign:"left",color:T.muted,fontSize:11,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",whiteSpace:"nowrap",fontWeight:600};
@@ -732,7 +956,7 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
               {past&&<div style={{flexShrink:0,display:"flex",alignItems:"center"}}><span style={{fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:oA+"18",padding:"3px 8px",borderRadius:4}}>AFHOLDT</span></div>}
               <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5}}>
                 <div style={{fontSize:isMobile?14:16,fontWeight:800,color:T.orange,fontFamily:"'Poppins',sans-serif"}}>{fmt(b.bandPay)}</div>
-                {isAdmin&&<button onClick={e=>{e.stopPropagation();openEdit(b);}} style={{padding:"4px 10px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>REDIGER</button>}
+                {isAdmin&&<button onClick={e=>{e.stopPropagation();setEditModal(b);}} style={{padding:"4px 10px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>REDIGER</button>}
               </div>
             </div>
           </div>
@@ -742,42 +966,7 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
     </div>
 
     {detailBooking&&<AliasDetailPopup booking={detailBooking} T={T} onClose={()=>setDetailBooking(null)}/>}
-
-    {editModal&&(<Modal title="REDIGER ALIAS JOB" onClose={()=>setEditModal(null)} T={T} wide>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <Field label="DATO" T={T}><Inp value={editForm.date} onChange={e=>setEditForm(p=>({...p,date:e.target.value}))} type="date" T={T}/></Field>
-        <Field label="JOB TYPE" T={T}><Inp value={editForm.type} onChange={e=>setEditForm(p=>({...p,type:e.target.value}))} T={T}/></Field>
-        <Field label="BY" T={T}><Inp value={editForm.city} onChange={e=>setEditForm(p=>({...p,city:e.target.value}))} T={T}/></Field>
-        <Field label="ADRESSE" T={T}><Inp value={editForm.address} onChange={e=>setEditForm(p=>({...p,address:e.target.value}))} T={T}/></Field>
-        <Field label="ANKOMST" T={T}><Inp value={editForm.arrival} onChange={e=>setEditForm(p=>({...p,arrival:e.target.value}))} T={T}/></Field>
-        <Field label="SPILLETID" T={T}><Inp value={editForm.playTime} onChange={e=>setEditForm(p=>({...p,playTime:e.target.value}))} T={T}/></Field>
-        <Field label="SÆT" T={T}><Inp value={editForm.sets} onChange={e=>setEditForm(p=>({...p,sets:e.target.value}))} T={T}/></Field>
-        <Field label="BEMANDING" T={T}><Inp value={editForm.musicians} onChange={e=>setEditForm(p=>({...p,musicians:e.target.value}))} type="number" T={T}/></Field>
-        <Field label="BELØB (kr)" T={T}><Inp value={editForm.bandPay} onChange={e=>setEditForm(p=>({...p,bandPay:e.target.value}))} type="number" T={T}/></Field>
-        <Field label="BOOKING (kr)" T={T}><Inp value={editForm.bookingFee} onChange={e=>setEditForm(p=>({...p,bookingFee:e.target.value}))} type="number" T={T}/></Field>
-        <Field label="BIL + GEAR" T={T}>
-          <select value={editForm.carGear?"ja":"nej"} onChange={e=>setEditForm(p=>({...p,carGear:e.target.value==="ja"}))}
-            style={{width:"100%",padding:"10px 12px",background:T.black,border:`1px solid ${T.border}`,color:T.white,fontSize:13,outline:"none",fontFamily:"'Poppins',sans-serif",borderRadius:0}}>
-            <option value="ja">Ja</option><option value="nej">Nej</option>
-          </select>
-        </Field>
-        <Field label="ARRANGØR" T={T}><Inp value={editForm.contact} onChange={e=>setEditForm(p=>({...p,contact:e.target.value}))} T={T}/></Field>
-        <Field label="TELEFON" T={T}><Inp value={editForm.phone} onChange={e=>setEditForm(p=>({...p,phone:e.target.value}))} T={T}/></Field>
-        <Field label="BOOKER" T={T}><Inp value={editForm.booker} onChange={e=>setEditForm(p=>({...p,booker:e.target.value}))} T={T}/></Field>
-      </div>
-      <Field label="NOTE" T={T}>
-        <textarea value={editForm.notes||""} onChange={e=>setEditForm(p=>({...p,notes:e.target.value}))}
-          style={{width:"100%",padding:"10px 12px",background:T.black,border:`1px solid ${T.border}`,color:T.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"'Poppins',sans-serif",borderRadius:0,resize:"vertical",minHeight:60}}/>
-      </Field>
-      <div style={{display:"flex",justifyContent:"space-between",marginTop:16}}>
-        <Btn onClick={()=>setConfirmDel(editModal.id)} color={T.red} small>FJERN JOB</Btn>
-        <div style={{display:"flex",gap:8}}>
-          <Btn onClick={()=>setEditModal(null)} color={T.muted} small>ANNULLER</Btn>
-          <Btn onClick={saveEdit} color={T.orange} small>GEM ÆNDRINGER</Btn>
-        </div>
-      </div>
-    </Modal>)}
-    {confirmDel&&<ConfirmModal message="Dette alias-job vil blive fjernet permanent og kan ikke fortrydes." onConfirm={()=>doDelete(confirmDel)} onCancel={()=>setConfirmDel(null)} T={T}/>}
+    {editModal&&<AliasEditModal booking={editModal} onSave={saveEdit} onDelete={()=>doDelete(editModal.id)} onClose={()=>setEditModal(null)} T={T}/>}
   </div>);
 }
 
@@ -796,9 +985,9 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
   const isMobile=winW<768;
   const [payTab,setPayTab]=useState("jobs");
 
-  const memberUsers=users.filter(u=>u.subType==="member"&&u.musicianId);
-  const ownerUsers =users.filter(u=>u.subType==="owner"&&u.musicianId);
-  const subUsers   =users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId);
+  const memberUsers=sortMusicians(users.filter(u=>u.subType==="member"&&u.musicianId));
+  const ownerUsers =sortMusicians(users.filter(u=>u.subType==="owner"&&u.musicianId));
+  const subUsers   =sortMusicians(users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId));
 
   const groupUsers=isSub?subUsers.filter(u=>u.id===currentUser.id):!isAdmin?memberUsers.filter(u=>u.id===currentUser.id):group==="members"?memberUsers:group==="owners"?ownerUsers:subUsers;
   const displayUsers=isAdmin&&selIds?groupUsers.filter(u=>selIds.includes(u.id)):groupUsers;
@@ -951,8 +1140,50 @@ function InfoView({currentUser,T}){
   </div>);
 }
 
+// ── Sortable musician row (DnD) ────────────────────────────────────────────
+function SortableMusicianRow({u,T,onEdit,onDelete,onGenerateLink,onShowLink,inviteLoading}){
+  const {attributes,listeners,setNodeRef,transform,transition,isDragging}=useSortable({id:u.id});
+  const style={transform:CSS.Transform.toString(transform),transition,position:"relative",zIndex:isDragging?1:0};
+  const c=userColor(u);
+  return(
+    <div ref={setNodeRef} style={style}>
+      <div style={{background:isDragging?T.orange+"11":T.dim,padding:"13px 16px",display:"flex",alignItems:"center",gap:12,borderLeft:`2px solid ${c}`,opacity:isDragging?0.8:1}}>
+        <div {...attributes} {...listeners} style={{color:T.muted,cursor:isDragging?"grabbing":"grab",fontSize:13,padding:"2px 4px",flexShrink:0,touchAction:"none",lineHeight:1,userSelect:"none"}}>☰</div>
+        {u.avatar?<img src={u.avatar} alt="" style={{width:34,height:34,borderRadius:2,objectFit:"cover",flexShrink:0}}/>
+          :<div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:13,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            {u.first} {u.last}
+            {u.status==="pending"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.muted+"22",color:T.muted,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>AFVENTER</span>}
+            {u.status==="invited"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.orange+"22",color:T.orange,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>INVITERET</span>}
+          </div>
+          <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:1,display:"flex",gap:6,flexWrap:"wrap"}}>
+            {u.email?<span>{u.email}</span>:<span style={{color:T.border,fontStyle:"italic"}}>(ingen email)</span>}
+            {u.instrument&&<span>· {u.instrument}</span>}
+            {(u.tags||[]).map(t=><span key={t} style={{background:T.orange+"22",color:T.orange,padding:"1px 6px",fontSize:9,letterSpacing:"0.07em",fontWeight:700}}>{TAG_LABELS[t]||t}</span>)}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
+          {u.status==="pending"&&<button onClick={()=>onGenerateLink(u)} disabled={inviteLoading===u.id}
+            style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em",opacity:inviteLoading===u.id?0.6:1}}>
+            {inviteLoading===u.id?"...":"🔗 LINK"}
+          </button>}
+          {u.status==="invited"&&<button onClick={()=>onShowLink(u)}
+            style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em"}}>
+            🔗 LINK
+          </button>}
+          <button onClick={()=>onEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
+          <Btn onClick={()=>onDelete(u)} color={T.red} small>FJERN</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── ADMIN ──────────────────────────────────────────────────────────────────
-function AdminView({users,setUsers,T}){
+function AdminView({users,setUsers,T,onReorder}){
   const [editing,setEditing]=useState(null);
   const blank={first:"",last:"",initials:"",instrument:"",email:"",password:"",isAdmin:false,tags:[],phone:"",avatar:null,color:""};
   const [form,setForm]=useState(blank);
