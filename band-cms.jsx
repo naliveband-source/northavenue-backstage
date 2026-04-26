@@ -1439,15 +1439,6 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
 
   return(<div>
 
-    {/* PAGE HEADER */}
-    <div style={{marginBottom:18}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-        <div style={{width:6,height:6,borderRadius:99,background:T.orange,flexShrink:0}}/>
-        <div style={{fontSize:10,color:T.muted,letterSpacing:"0.18em",fontFamily:"'Poppins',sans-serif",fontWeight:700,textTransform:"uppercase"}}>Brugere og indstillinger</div>
-      </div>
-      <h1 style={{margin:0,fontSize:size==="desktop"?42:size==="tablet"?34:28,fontWeight:900,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",color:T.white,lineHeight:1.05}}>ADMINISTRATION</h1>
-    </div>
-
     {/* STAT STRIP */}
     <div style={{border:`1px solid ${T.border}`,borderRadius:14,overflow:"hidden",marginBottom:20}}>
       <div style={{display:"grid",gridTemplateColumns:size==="desktop"?"repeat(5,1fr)":size==="tablet"?"repeat(3,1fr)":"repeat(2,1fr)",gap:1,background:T.border}}>
@@ -2011,10 +2002,10 @@ export default function App(){
     <div style={{marginLeft:isMobile?0:isTablet?180:240,flex:1,padding:isMobile?"72px 16px 24px":isTablet?"24px":40,minWidth:0}}>
       <div style={{position:"fixed",top:0,right:0,width:"40%",height:"40%",background:`radial-gradient(ellipse at top right,${T.orange}07 0%,transparent 70%)`,pointerEvents:"none",zIndex:0}}/>
       <div style={{position:"relative",zIndex:1}}>
-        {effectiveView!=="admin"&&<div style={{marginBottom:isMobile?16:28,paddingBottom:isMobile?12:20,borderBottom:`1px solid ${T.border}`}}>
+        <div style={{marginBottom:isMobile?16:28,paddingBottom:isMobile?12:20,borderBottom:`1px solid ${T.border}`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><NAStar size={10} color={T.orange} opacity={0.6}/><span style={{fontSize:9,color:T.muted,letterSpacing:"0.14em"}}>{meta[effectiveView]?.sub}</span></div>
           <h1 style={{fontSize:isMobile?18:isTablet?22:28,fontWeight:800,color:T.white,margin:0,letterSpacing:"0.04em"}}>{meta[effectiveView]?.title}</h1>
-        </div>}
+        </div>
         {effectiveView==="bookings"&&<BookingsView currentUser={curU} bookings={bookings} setBookings={handleSetBookings} users={users} T={T} darkMode={darkMode}/>}
         {effectiveView==="alias"   &&<AliasView currentUser={curU} aliasData={aliasData} setAliasData={handleSetAliasData} users={users} T={T} darkMode={darkMode}/>}
         {effectiveView==="payroll" &&<PayrollView currentUser={curU} bookings={bookings} payments={payments} setPayments={handleSetPayments} users={users} T={T}/>}
