@@ -270,6 +270,36 @@ export async function GET(req) {
 
     console.log("[hubspot-sync] alias-manager lookups:", lookupStats);
 
+    // Cross-table cleanup: a hs_id must live in at most one table at a time.
+    // If a deal was moved between pipelines in HubSpot, archive it in the old table.
+    const crossCleanBookings = await sql`
+      UPDATE bookings
+      SET archived = true, archived_at = NOW()
+      WHERE archived = false
+        AND hs_id IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM alias_bookings a
+          WHERE a.hs_id = bookings.hs_id AND a.archived = false
+        )
+      RETURNING hs_id
+    `;
+    if (crossCleanBookings.length > 0)
+      console.log("[sync] cross-cleanup: archived", crossCleanBookings.length, "booking(s) moved to alias:", crossCleanBookings.map(r => r.hs_id));
+
+    const crossCleanAlias = await sql`
+      UPDATE alias_bookings
+      SET archived = true, archived_at = NOW()
+      WHERE archived = false
+        AND hs_id IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM bookings b
+          WHERE b.hs_id = alias_bookings.hs_id AND b.archived = false
+        )
+      RETURNING hs_id
+    `;
+    if (crossCleanAlias.length > 0)
+      console.log("[sync] cross-cleanup: archived", crossCleanAlias.length, "alias booking(s) moved to bookings:", crossCleanAlias.map(r => r.hs_id));
+
     // Auto-archive stale HubSpot rows that are no longer in closedwon
     const debug = { originalCount, closedwonCount: filteredDeals.length, stageCounts };
     const currentHsIds = filteredDeals.map(d => "hs_" + String(d.id));
@@ -292,7 +322,9 @@ export async function GET(req) {
       `;
       debug.autoArchived = {
         bookings: staleBookings.length,
-        alias: staleAlias.length
+        alias: staleAlias.length,
+        crossCleanBookings: crossCleanBookings.length,
+        crossCleanAlias: crossCleanAlias.length,
       };
     }
 
