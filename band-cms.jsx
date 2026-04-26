@@ -808,7 +808,10 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   const winW=useWindowWidth();
   const isMobile=winW<768;
   const isTablet=winW<1400;
-  const visibleBookings=isAdmin?bookings:bookings.filter(b=>b.memberIds.includes(currentUser.musicianId)||b.substituteIds.includes(currentUser.musicianId));
+  const isMusiker=!isAdmin&&!isSub;
+  const visibleBookings=isAdmin||isMusiker
+    ?bookings
+    :bookings.filter(b=>b.memberIds.includes(currentUser.musicianId)||b.substituteIds.includes(currentUser.musicianId));
   const filtered=useMemo(()=>visibleBookings.filter(b=>getYear(b.date)===yr),[visibleBookings,yr]);
   const [filter,setFilter]=useState("all");
   const pastCount=filtered.filter(b=>isPast(b.date)).length;
@@ -824,9 +827,21 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   const totalMPay=filtered.reduce((s,b)=>s+calcMusicianPay(b.bandPay),0);
   const myEarned=myJobs.reduce((s,b)=>{const inSub=b.substituteIds.includes(currentUser.musicianId)&&!b.memberIds.includes(currentUser.musicianId);return s+(inSub?calcSubPay(calcMusicianPay(b.bandPay)):calcMusicianPay(b.bandPay));},0);
 
-  const [absent,setAbsent]=useState(new Set());
-  const toggleAbsent=(bid)=>{
-    setAbsent(prev=>{const n=new Set(prev);if(n.has(bid))n.delete(bid);else n.add(bid);return n;});
+  const toggleMember=async(bookingId,musicianId)=>{
+    const booking=bookings.find(b=>b.id===bookingId);
+    if(!booking)return;
+    const isIn=booking.memberIds.includes(musicianId);
+    const newMemberIds=isIn
+      ?booking.memberIds.filter(id=>id!==musicianId)
+      :[...booking.memberIds,musicianId];
+    setBookings(prev=>prev.map(b=>b.id===bookingId?{...b,memberIds:newMemberIds}:b));
+    try{
+      const res=await fetch('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...booking,memberIds:newMemberIds})});
+      if(!res.ok)throw new Error('API error '+res.status);
+    }catch(err){
+      console.error('[toggleMember] failed, reverting:',err);
+      setBookings(prev=>prev.map(b=>b.id===bookingId?{...b,memberIds:booking.memberIds}:b));
+    }
   };
 
   const oA=darkMode?"#D4622A":"#C4521F";
@@ -862,13 +877,12 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
         const pay=isSub?sp:mp;
         const iAmIn=b.memberIds.includes(currentUser.musicianId)||b.substituteIds.includes(currentUser.musicianId);
         const isMyJob=isAdmin||iAmIn;
-        const isAbsent=!isAdmin&&absent.has(b.id);
         const br=PAY_BRACKETS.find(x=>x.pay===pay)||PAY_BRACKETS.slice(-1)[0];
         const weekday=new Date(b.date).toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
         const dateStr=new Date(b.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"});
         return(
           <div key={b.id} onClick={()=>setDetailBooking(b)}
-            style={{background:T.dim,borderRadius:12,overflow:"hidden",display:"flex",cursor:"pointer",opacity:past?0.65:isAbsent?0.45:isMyJob?1:0.3,position:"relative"}}>
+            style={{background:T.dim,borderRadius:12,overflow:"hidden",display:"flex",cursor:"pointer",opacity:past?0.65:isMyJob?1:0.3,position:"relative"}}>
             <div style={{width:5,background:past?oA:isMyJob?br.color:T.border,flexShrink:0}}/>
             <div style={{padding:isMobile?"12px 14px":"14px 20px",display:"flex",alignItems:"center",gap:isMobile?12:20,flex:1,minWidth:0}}>
               <div style={{textAlign:"center",flexShrink:0,minWidth:isMobile?40:52}}>
@@ -886,16 +900,15 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
               {!isMobile&&!isSub&&(
                 <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
                   {past&&<span style={{fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:oA+"18",padding:"3px 8px",borderRadius:4,marginRight:4}}>AFHOLDT</span>}
-                  {!past&&isAbsent&&<span style={{fontSize:8,color:T.red,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:T.red+"18",padding:"3px 8px",borderRadius:4,marginRight:4}}>FRAVÆRENDE</span>}
                   {memberUsers.map(u=><UserChip key={u.id} user={u} active={b.memberIds.includes(u.musicianId)} T={T}/>)}
                 </div>
               )}
               <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5}}>
                 <div style={{fontSize:isMobile?14:16,fontWeight:800,color:isAdmin?T.orange:br.color,fontFamily:"'Poppins',sans-serif"}}>{isAdmin?fmt(b.bandPay):fmt(pay)}</div>
                 {!isAdmin&&!past&&b.memberIds.includes(currentUser.musicianId)&&(
-                  <button onClick={e=>{e.stopPropagation();toggleAbsent(b.id);}}
-                    style={{padding:"4px 10px",border:`1px solid ${isAbsent?T.green:T.red}`,background:isAbsent?T.green+"22":T.red+"18",color:isAbsent?T.green:T.red,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
-                    {isAbsent?"MELD PÅ":"MELD FRAVÆRENDE"}
+                  <button onClick={e=>{e.stopPropagation();toggleMember(b.id,currentUser.musicianId);}}
+                    style={{padding:"4px 10px",border:`1px solid ${T.red}`,background:T.red+"18",color:T.red,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
+                    MELD FRAVÆRENDE
                   </button>
                 )}
                 {isAdmin&&(
