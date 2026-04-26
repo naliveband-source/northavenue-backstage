@@ -1440,7 +1440,7 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
   return(<div>
 
     {/* STAT STRIP */}
-    <div style={{border:`1px solid ${T.border}`,borderRadius:14,overflow:"hidden",marginBottom:20}}>
+    {size!=="mobile"&&<div style={{border:`1px solid ${T.border}`,borderRadius:14,overflow:"hidden",marginBottom:20}}>
       <div style={{display:"grid",gridTemplateColumns:size==="desktop"?"repeat(5,1fr)":size==="tablet"?"repeat(3,1fr)":"repeat(2,1fr)",gap:1,background:T.border}}>
         {statCells.map(({label,n,accent})=>(
           <div key={label} style={{padding:size==="mobile"?12:18,background:T.dim}}>
@@ -1449,7 +1449,7 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
           </div>
         ))}
       </div>
-    </div>
+    </div>}
 
     {/* ROLE TABS — MOBILE: 2×2 pill grid */}
     {size==="mobile"?(
