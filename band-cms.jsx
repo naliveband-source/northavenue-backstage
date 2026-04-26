@@ -321,9 +321,10 @@ function AliasDetailPopup({booking,T,onClose}){
               <Fld label="BIL + GEAR" value={carGearVal}/>
               <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"10px 16px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px 16px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
               <Fld label="KONTAKTPERSON" value={booking.contact}/>
               <Fld label="TELEFON" value={booking.phone}/>
+              <Fld label="BOOKING (KR)" value={booking.bookingFee?`${fmt(booking.bookingFee)} kr.`:null} color={T.orange}/>
             </div>
             {booking.notes&&<div style={{padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
               <div style={{fontSize:10,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
@@ -361,8 +362,9 @@ function AliasDetailPopup({booking,T,onClose}){
             <Fld label="BEMANDING" value={booking.musicians?`${booking.musicians} musikere`:null}/>
             <Fld label="BIL + GEAR" value={carGearVal}/>
             <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
-            <Fld label="KONTAKTPERSON" value={booking.contact} span={2}/>
+            <Fld label="KONTAKTPERSON" value={booking.contact}/>
             <Fld label="TELEFON" value={booking.phone}/>
+            <Fld label="BOOKING (KR)" value={booking.bookingFee?`${fmt(booking.bookingFee)} kr.`:null} color={T.orange}/>
           </div>
           {booking.notes&&<div style={{padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
         </div>
