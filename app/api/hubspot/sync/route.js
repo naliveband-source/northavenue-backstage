@@ -155,6 +155,17 @@ export async function GET(req) {
       stageCounts[s] = (stageCounts[s] || 0) + 1;
     });
 
+    const activeMusicians = await sql`
+      SELECT musician_id
+      FROM users
+      WHERE (archived = false OR archived IS NULL)
+        AND musician_id IS NOT NULL
+        AND tags LIKE '%musiker%'
+      ORDER BY display_order ASC NULLS LAST, musician_id ASC
+    `;
+    const defaultMemberIds = JSON.stringify(activeMusicians.map(u => u.musician_id));
+    console.log("[hubspot-sync] default member_ids for new bookings:", defaultMemberIds);
+
     let naCount = 0;
     let aliasCount = 0;
     let skipped = 0;
@@ -250,7 +261,7 @@ export async function GET(req) {
             ${parseFloat(p.amount) || 0},
             ${booker},
             ${p.description || ""},
-            ${"[1,2,3,4,5,6]"}, ${"[]"}
+            ${defaultMemberIds}, ${"[]"}
           )
           ON CONFLICT (hs_id) DO UPDATE SET
             date      = EXCLUDED.date,
