@@ -1642,8 +1642,21 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
   const u=users.find(x=>x.id===currentUser.id)||currentUser;
   const [form,setForm]=useState({first:u.first||"",last:u.last||"",phone:u.phone||"",email:u.email||""});
   const [pw,setPw]=useState({old:"",next:"",conf:""});
-  const [msg,setMsg]=useState(null);const [pwMsg,setPwMsg]=useState(null);
+  const [msg,setMsg]=useState(null);
+  const [pwMsg,setPwMsg]=useState(null);
   const [deleteConfirm,setDeleteConfirm]=useState(false);
+  const [hoverDel,setHoverDel]=useState(false);
+  const winW=useWindowWidth();
+  const size=winW>=1024?"desktop":winW>=640?"tablet":"mobile";
+
+  const cardStyle={background:T.dim,border:`1px solid ${T.border}`,borderRadius:14,padding:size==="mobile"?16:24};
+  const secLabel=(eyebrow,idx,color=T.orange)=>(
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:14}}>
+      <div style={{fontSize:10,color,letterSpacing:"0.18em",fontFamily:"'Poppins',sans-serif",fontWeight:700,textTransform:"uppercase"}}>{eyebrow}</div>
+      <div style={{fontFamily:"'Trirong',serif",fontStyle:"italic",fontSize:12,color:T.muted}}>{idx}</div>
+    </div>
+  );
+
   const saveProfile=()=>{
     const taken=users.some(x=>x.id!==currentUser.id&&x.email===form.email);
     if(taken){setMsg({err:true,text:"Email er allerede i brug"});return;}
@@ -1652,53 +1665,129 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
   };
   const savePw=()=>{
     const usr=users.find(x=>x.id===currentUser.id);
-    if(usr.password!==pw.old){setPwMsg({err:true,text:"Nuværende adgangskode er forkert"});return;}
-    if(pw.next.length<6){setPwMsg({err:true,text:"Mindst 6 tegn"});return;}
-    if(pw.next!==pw.conf){setPwMsg({err:true,text:"Matcher ikke"});return;}
+    if(usr.password!==pw.old){setPwMsg({err:true,text:"Forkert nuværende adgangskode",field:"old"});return;}
+    if(pw.next.length<6){setPwMsg({err:true,text:"Mindst 6 tegn",field:"new"});return;}
+    if(pw.next!==pw.conf){setPwMsg({err:true,text:"Adgangskoderne matcher ikke",field:"conf"});return;}
     setUsers(prev=>prev.map(x=>x.id===currentUser.id?{...x,password:pw.next}:x));
-    setPwMsg({err:false,text:"Adgangskode opdateret ✓"});setPw({old:"",next:"",conf:""});
+    setPwMsg({err:false,text:"Adgangskode opdateret ✓",field:null});
+    setPw({old:"",next:"",conf:""});
   };
-  return(<div style={{maxWidth:500,display:"flex",flexDirection:"column",gap:16}}>
-    <div style={{background:T.dim,padding:28,borderRadius:12}}>
-      <div style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:20}}>PROFILOPLYSNINGER</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <Field label="FORNAVN" T={T}><Inp value={form.first} onChange={e=>setForm(p=>({...p,first:e.target.value}))} T={T}/></Field>
-        <Field label="EFTERNAVN" T={T}><Inp value={form.last} onChange={e=>setForm(p=>({...p,last:e.target.value}))} T={T}/></Field>
+
+  const isGoogleUser=!!(u.google_id||currentUser.google_id);
+  const instrument=u.instrument||"";
+
+  return(<div>
+    <div style={{maxWidth:1000,display:"grid",gridTemplateColumns:size==="desktop"?"1fr 1fr":"1fr",gap:14}}>
+
+      {/* CARD 1 — HERO */}
+      <div style={{...cardStyle,gridColumn:"1 / -1",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-30,right:-30,pointerEvents:"none"}}>
+          <NAStar size={160} color={T.orange} opacity={0.06}/>
+        </div>
+        <div style={{display:"flex",flexDirection:size==="mobile"?"column":"row",alignItems:size==="mobile"?"flex-start":"center",gap:size==="mobile"?14:20,position:"relative"}}>
+          <div style={{width:size==="mobile"?56:64,height:size==="mobile"?56:64,borderRadius:12,background:userColor(u),display:"grid",placeItems:"center",flexShrink:0}}>
+            <span style={{fontFamily:"'Trirong',serif",fontSize:size==="mobile"?18:22,fontWeight:600,color:"#F8F5E6"}}>{u.initials||"?"}</span>
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:10,color:T.muted,letterSpacing:"0.18em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:4,textTransform:"uppercase"}}>LOGGET IND SOM</div>
+            <div style={{fontFamily:"'Trirong',serif",fontSize:size==="mobile"?20:24,fontWeight:600,letterSpacing:"-0.01em",lineHeight:1.1,color:T.white}}>{u.first} {u.last}</div>
+            <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
+              {instrument
+                ?<span style={{padding:"4px 10px",fontSize:10,borderRadius:99,fontWeight:600,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.04em",background:`color-mix(in oklab, ${T.orange} 16%, transparent)`,color:T.orange,whiteSpace:"nowrap"}}>Musiker · {instrument}</span>
+                :<span style={{padding:"4px 10px",fontSize:10,borderRadius:99,fontWeight:600,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.04em",background:`color-mix(in oklab, ${T.orange} 16%, transparent)`,color:T.orange,whiteSpace:"nowrap"}}>Musiker</span>
+              }
+              {u.isAdmin&&<span style={{padding:"4px 10px",fontSize:10,borderRadius:99,fontWeight:600,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.04em",background:`color-mix(in oklab, ${T.orange} 16%, transparent)`,color:T.orange,whiteSpace:"nowrap"}}>Admin / Ejer</span>}
+            </div>
+          </div>
+          {size!=="mobile"&&(
+            <div style={{textAlign:"right",flexShrink:0}}>
+              <div style={{fontSize:9,color:T.muted,letterSpacing:"0.1em",fontFamily:"monospace",marginBottom:4}}>SESSION</div>
+              <div style={{fontFamily:"'Trirong',serif",fontStyle:"italic",fontSize:12,color:T.muted}}>Session aktiv</div>
+            </div>
+          )}
+        </div>
       </div>
-      <Field label="TELEFON" T={T}><Inp value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} placeholder="+45 12 34 56 78" T={T}/></Field>
-      <Field label="EMAIL" T={T}><Inp value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} type="email" T={T}/></Field>
-      {msg&&<div style={{fontSize:12,color:msg.err?T.red:T.green,marginBottom:10,fontFamily:"'Poppins',sans-serif"}}>{msg.text}</div>}
-      <Btn onClick={saveProfile} color={T.orange}>GEM PROFIL →</Btn>
-    </div>
-    <div style={{background:T.dim,padding:28,borderRadius:12}}>
-      <div style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:20}}>SKIFT ADGANGSKODE</div>
-      <Field label="NUVÆRENDE ADGANGSKODE" T={T}><PwInput value={pw.old} onChange={e=>setPw(p=>({...p,old:e.target.value}))} T={T}/></Field>
-      <Field label="NY ADGANGSKODE" T={T}><PwInput value={pw.next} onChange={e=>setPw(p=>({...p,next:e.target.value}))} T={T}/></Field>
-      <Field label="BEKRÆFT" T={T}><PwInput value={pw.conf} onChange={e=>setPw(p=>({...p,conf:e.target.value}))} T={T}/></Field>
-      {pwMsg&&<div style={{fontSize:12,color:pwMsg.err?T.red:T.green,marginBottom:10,fontFamily:"'Poppins',sans-serif"}}>{pwMsg.text}</div>}
-      <Btn onClick={savePw} color={T.orange}>GEM ADGANGSKODE →</Btn>
-      <p style={{fontSize:11,color:T.muted,marginTop:12,fontFamily:"'Poppins',sans-serif",lineHeight:1.7}}>Din adgangskode er kun synlig for dig selv.</p>
-    </div>
-    <div style={{background:T.dim,padding:28,borderRadius:12}}>
-      <div style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:16}}>TEMA</div>
-      <div style={{display:"flex",gap:8}}>
-        {[{id:true,label:"☾ MØRKT",desc:"Mørk baggrund"},{id:false,label:"☀ LYST",desc:"Lys baggrund"}].map(opt=>{
-          const active=darkMode===opt.id;
-          return(<button key={String(opt.id)} onClick={()=>setDarkMode(opt.id)}
-            style={{flex:1,padding:"14px 16px",background:active?T.black:"transparent",border:`1px solid ${active?T.orange:T.border}`,borderRadius:10,cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
-            <div style={{fontSize:13,fontWeight:active?700:400,color:active?T.white:T.muted,fontFamily:"'Poppins',sans-serif"}}>{opt.label}</div>
-            <div style={{fontSize:10,color:active?T.muted:T.border,fontFamily:"'Poppins',sans-serif",marginTop:3}}>{opt.desc}</div>
-          </button>);
-        })}
+
+      {/* CARD 2 — PROFILOPLYSNINGER */}
+      <div style={cardStyle}>
+        {secLabel("PROFILOPLYSNINGER","1 / 4")}
+        <div style={{display:"grid",gridTemplateColumns:size==="mobile"?"1fr":"1fr 1fr",gap:12}}>
+          <Field label="FORNAVN" T={T}><Inp value={form.first} onChange={e=>setForm(p=>({...p,first:e.target.value}))} T={T}/></Field>
+          <Field label="EFTERNAVN" T={T}><Inp value={form.last} onChange={e=>setForm(p=>({...p,last:e.target.value}))} T={T}/></Field>
+        </div>
+        <Field label="TELEFON" T={T}><Inp value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} placeholder="+45 12 34 56 78" T={T}/></Field>
+        <Field label="EMAIL" T={T}>
+          {isGoogleUser
+            ?<input readOnly value={form.email} style={{width:"100%",padding:"10px 12px",background:T.black,border:`1px solid ${T.border}`,color:T.muted,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"'Poppins',sans-serif",borderRadius:0,cursor:"default",opacity:0.7}}/>
+            :<Inp value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} type="email" T={T}/>
+          }
+        </Field>
+        {isGoogleUser&&<div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:-8,marginBottom:14}}>Email styres via din Google-konto.</div>}
+        {msg&&<div style={{fontSize:12,color:msg.err?T.red:T.green,marginBottom:10,fontFamily:"'Poppins',sans-serif"}}>{msg.text}</div>}
+        <Btn onClick={saveProfile} color={T.orange} small style={size==="mobile"?{width:"100%"}:{}}>Gem profil →</Btn>
       </div>
-    </div>
-    <div style={{background:T.dim,padding:28,borderRadius:12,border:`1px solid ${T.red}33`}}>
-      <div style={{fontSize:9,color:T.red,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:12}}>FAREOMRÅDE</div>
-      <div style={{fontSize:12,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:16,lineHeight:1.6}}>
-        Din profil arkiveres permanent. Du kan ikke fortryde dette selv.
+
+      {/* CARD 3 — SKIFT ADGANGSKODE */}
+      <div style={cardStyle}>
+        {secLabel("SKIFT ADGANGSKODE","2 / 4")}
+        <Field label="NUVÆRENDE ADGANGSKODE" T={T}><PwInput value={pw.old} onChange={e=>setPw(p=>({...p,old:e.target.value}))} T={T}/></Field>
+        {pwMsg?.err&&pwMsg.field==="old"&&<div style={{fontSize:11,color:T.red,fontFamily:"'Poppins',sans-serif",marginTop:-10,marginBottom:12}}>{pwMsg.text}</div>}
+        <div style={{display:"grid",gridTemplateColumns:size==="mobile"?"1fr":"1fr 1fr",gap:12}}>
+          <div>
+            <Field label="NY ADGANGSKODE" T={T}><PwInput value={pw.next} onChange={e=>setPw(p=>({...p,next:e.target.value}))} T={T}/></Field>
+            {pwMsg?.err&&pwMsg.field==="new"&&<div style={{fontSize:11,color:T.red,fontFamily:"'Poppins',sans-serif",marginTop:-10,marginBottom:12}}>{pwMsg.text}</div>}
+          </div>
+          <div>
+            <Field label="BEKRÆFT ADGANGSKODE" T={T}><PwInput value={pw.conf} onChange={e=>setPw(p=>({...p,conf:e.target.value}))} T={T}/></Field>
+            {pwMsg?.err&&pwMsg.field==="conf"&&<div style={{fontSize:11,color:T.red,fontFamily:"'Poppins',sans-serif",marginTop:-10,marginBottom:12}}>{pwMsg.text}</div>}
+          </div>
+        </div>
+        <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:14,lineHeight:1.5}}>Mindst 6 tegn. Kun synlig for dig.</div>
+        {pwMsg&&!pwMsg.err&&<div style={{fontSize:12,color:T.green,marginBottom:10,fontFamily:"'Poppins',sans-serif"}}>{pwMsg.text}</div>}
+        <Btn onClick={savePw} color={T.orange} small style={size==="mobile"?{width:"100%"}:{}}>Gem adgangskode →</Btn>
       </div>
-      <Btn onClick={()=>setDeleteConfirm(true)} color={T.red} small>SLET MIN PROFIL</Btn>
+
+      {/* CARD 4 — TEMA */}
+      <div style={cardStyle}>
+        {secLabel("TEMA","3 / 4")}
+        <div style={{display:"flex",gap:10}}>
+          {[
+            {id:true, icon:"☾", label:"Mørkt", bg:"#181719", fg:"#F8F5E6", accent:"#D4622A"},
+            {id:false,icon:"☀", label:"Lyst",  bg:"#F2EFE4", fg:"#181719", accent:"#C4521F"},
+          ].map(opt=>{
+            const active=darkMode===opt.id;
+            return(<button key={String(opt.id)} onClick={()=>setDarkMode(opt.id)}
+              style={{flex:1,borderRadius:10,overflow:"hidden",cursor:"pointer",padding:0,background:"transparent",border:`1px solid ${active?T.orange:T.border}`,transition:"border-color .15s"}}>
+              <div style={{height:size==="mobile"?48:56,padding:8,position:"relative",background:opt.bg}}>
+                <div style={{fontFamily:"'Poppins',sans-serif",fontWeight:800,fontSize:10,lineHeight:0.95}}>
+                  <div style={{color:opt.fg}}>NORTH</div>
+                  <div style={{color:opt.accent}}>AVENUE</div>
+                </div>
+                <div style={{width:7,height:7,borderRadius:99,position:"absolute",top:6,right:6,background:opt.accent}}/>
+              </div>
+              <div style={{padding:"8px 12px",fontSize:11,fontWeight:700,fontFamily:"'Poppins',sans-serif",color:T.cardText,background:T.dim,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span>{opt.icon}  {opt.label}</span>
+                {active&&<span style={{fontSize:9,fontWeight:700,letterSpacing:"0.18em",color:T.orange}}>AKTIV</span>}
+              </div>
+            </button>);
+          })}
+        </div>
+      </div>
+
+      {/* CARD 5 — FAREOMRÅDE */}
+      <div style={{...cardStyle,border:`1px solid color-mix(in oklab, ${T.red} 40%, ${T.border})`}}>
+        {secLabel("FAREOMRÅDE","4 / 4",T.red)}
+        <div style={{fontSize:12,color:T.muted,fontFamily:"'Poppins',sans-serif",lineHeight:1.6,marginBottom:14}}>
+          Din profil arkiveres permanent. Du kan ikke fortryde dette selv. Kontakt en anden admin hvis du har brug for hjælp.
+        </div>
+        <button onClick={()=>setDeleteConfirm(true)} onMouseEnter={()=>setHoverDel(true)} onMouseLeave={()=>setHoverDel(false)}
+          style={{padding:size==="mobile"?"12px":"8px 16px",width:size==="mobile"?"100%":"auto",minHeight:size==="mobile"?44:undefined,background:hoverDel?`color-mix(in oklab, ${T.red} 12%, transparent)`:"transparent",border:`1px solid ${T.red}`,color:T.red,borderRadius:8,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"background .15s"}}>
+          SLET MIN PROFIL
+        </button>
+      </div>
+
     </div>
+
     {deleteConfirm&&<ConfirmModal
       message="Er du sikker? Din profil arkiveres og du logges ud. Kontakt admin hvis du fortryder."
       onConfirm={async()=>{
