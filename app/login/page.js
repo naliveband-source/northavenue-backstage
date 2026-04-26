@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 
 const NA = {
   black:   "#181719",
@@ -132,15 +133,8 @@ function LoginPage() {
           justifyContent: "space-between", alignItems: "flex-start",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            {/* Symbol placeholder — replace div with:
-                <Image src="/brand/NA_symbol.png" alt="" width={44} height={44} priority />
-                once /public/brand/NA_symbol.png is added */}
-            <div style={{
-              width: 44, height: 44, background: NA.orange, flexShrink: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 14, fontWeight: 800, color: NA.white,
-              letterSpacing: "-0.04em", fontFamily: "'Poppins',sans-serif",
-            }}>NA</div>
+            <Image src="/brand/NA_symbol.png" alt="" width={44} height={44} priority
+              style={{ display: "block", flexShrink: 0 }} />
             <div>
               <div style={{
                 fontSize: 11, letterSpacing: "0.28em", color: NA.white,
