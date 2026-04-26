@@ -1826,14 +1826,17 @@ export default function App(){
         </button>))}
       </nav>
       <div style={{padding:isTablet?12:16,borderTop:`1px solid ${T.border}`}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-          <div style={{width:30,height:30,background:userColor(curU)+"22",border:`1px solid ${userColor(curU)}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:userColor(curU),fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{curU.initials||"?"}</div>
-          <div><div style={{fontSize:isTablet?11:13,fontWeight:700,color:T.white}}>{curU.first}</div>
-            <div style={{fontSize:9,color:T.muted}}>{isAdmin?"ADMIN":isSub?"VIKAR":isAliasOnly?"ALIAS":"MUSIKER"}</div>
+        <div style={{border:`1px solid ${T.border}`,borderRadius:12,padding:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:32,height:32,background:userColor(curU),borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{curU.initials||"?"}</div>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{curU.first}</div>
+              <div style={{fontSize:9,fontWeight:600,color:T.muted,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.18em"}}>{isAdmin?"ADMIN":isSub?"VIKAR":isAliasOnly?"ALIAS":"MUSIKER"}</div>
+            </div>
           </div>
         </div>
-        <button onClick={()=>signOut({callbackUrl:"/login"})} style={{width:"100%",padding:"7px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:6,color:T.muted,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",transition:"all .15s"}}
-          onMouseEnter={e=>{e.target.style.borderColor=T.orange;e.target.style.color=T.orange;}} onMouseLeave={e=>{e.target.style.borderColor=T.border;e.target.style.color=T.muted;}}>LOG UD</button>
+        <button onClick={()=>signOut({callbackUrl:"/login"})} style={{width:"100%",marginTop:12,padding:"8px",background:"transparent",border:"none",color:T.muted,cursor:"pointer",fontSize:10,letterSpacing:"0.2em",fontFamily:"'Poppins',sans-serif",fontWeight:600,transition:"color .15s"}}
+          onMouseEnter={e=>{e.currentTarget.style.color=T.orange;}} onMouseLeave={e=>{e.currentTarget.style.color=T.muted;}}>LOG UD</button>
       </div>
     </div>)}
 
