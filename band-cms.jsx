@@ -503,8 +503,16 @@ function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
   const [form,setForm]=useState({...booking,bandPay:String(booking.bandPay)});
   const [section,setSection]=useState("detaljer");
   const [askDel,setAskDel]=useState(false);
+  const [isSaving,setIsSaving]=useState(false);
+  const [saveSuccess,setSaveSuccess]=useState(false);
+  const [saveError,setSaveError]=useState(null);
   const winW=useWindowWidth();
   const isMobile=winW<768;
+  useEffect(()=>{
+    const handler=e=>{if(isSaving){e.preventDefault();e.returnValue='';}};
+    window.addEventListener('beforeunload',handler);
+    return()=>window.removeEventListener('beforeunload',handler);
+  },[isSaving]);
   const memberUsers=sortMusicians(users.filter(u=>u.musicianId&&u.subType!=="substitute"&&u.subType!=="alias"));
   const subUsers=users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId);
   const toggleMember=mid=>setForm(p=>{const has=p.memberIds.includes(mid);return{...p,memberIds:has?p.memberIds.filter(x=>x!==mid):[...p.memberIds,mid]};});
@@ -577,20 +585,34 @@ function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
     </div>
   );
 
+  const doSaveBooking=async()=>{
+    setIsSaving(true);setSaveError(null);
+    const payload={...form,bandPay:parseFloat(form.bandPay)||0};
+    try{
+      const res=await fetch('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!res.ok){const d=await res.json();throw new Error(d.error||`Fejl ${res.status}`);}
+      setSaveSuccess(true);
+      setTimeout(()=>{setSaveSuccess(false);onSave(payload);},800);
+    }catch(e){setSaveError(e.message||"Kunne ikke gemme. Prøv igen.");}
+    finally{setIsSaving(false);}
+  };
   const footer=(
-    <div style={{padding:"14px 24px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",background:T.dim,flexShrink:0}}>
-      <Btn onClick={()=>setAskDel(true)} color={T.red} small>FJERN JOB</Btn>
-      <div style={{display:"flex",gap:8}}>
-        <Btn onClick={onClose} color={T.muted} small>ANNULLER</Btn>
-        <Btn onClick={()=>onSave({...form,bandPay:parseFloat(form.bandPay)||0})} color={T.orange} small>GEM</Btn>
+    <div style={{padding:"14px 24px",borderTop:`1px solid ${T.border}`,background:T.dim,flexShrink:0}}>
+      <div style={{display:"flex",justifyContent:"space-between"}}>
+        <Btn onClick={()=>setAskDel(true)} color={T.red} small disabled={isSaving}>FJERN JOB</Btn>
+        <div style={{display:"flex",gap:8}}>
+          <Btn onClick={onClose} color={T.muted} small disabled={isSaving}>ANNULLER</Btn>
+          <Btn onClick={doSaveBooking} color={saveSuccess?T.green:T.orange} small disabled={isSaving||saveSuccess}>{isSaving?"GEMMER...":saveSuccess?"Gemt ✓":"GEM"}</Btn>
+        </div>
       </div>
+      {saveError&&<div style={{fontSize:11,color:T.red,marginTop:8,textAlign:"right",fontFamily:"'Poppins',sans-serif"}}>{saveError}</div>}
     </div>
   );
 
   if(isMobile){
     return createPortal(
       <div style={{position:"fixed",inset:0,background:"#000d",zIndex:200,display:"flex",alignItems:"flex-end"}}>
-        <div style={{background:T.dim,width:"100%",maxHeight:"95vh",display:"flex",flexDirection:"column",borderRadius:"16px 16px 0 0"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:T.dim,width:"100%",maxHeight:"95vh",display:"flex",flexDirection:"column",borderRadius:"16px 16px 0 0",position:"relative"}} onClick={e=>e.stopPropagation()}>
           <div style={{display:"flex",overflowX:"auto",borderBottom:`1px solid ${T.border}`,padding:"0 4px",flexShrink:0}}>
             {SECS.map(s=>(<button key={s.id} onClick={()=>setSection(s.id)}
               style={{padding:"14px 18px",background:"transparent",border:"none",borderBottom:section===s.id?`2px solid ${T.orange}`:"2px solid transparent",color:section===s.id?T.orange:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:section===s.id?700:400,letterSpacing:"0.08em",whiteSpace:"nowrap",flexShrink:0}}>
@@ -603,6 +625,7 @@ function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
           </div>
           <div style={{flex:1,overflowY:"auto",padding:20}}>{renderSection()}</div>
           {footer}
+          {isSaving&&<div style={{position:"absolute",inset:0,background:"#000",opacity:0.5,pointerEvents:"all",zIndex:10,borderRadius:"16px 16px 0 0"}}/>}
         </div>
       </div>,
       document.body
@@ -612,7 +635,7 @@ function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
   const sideW=winW>=1024?180:160;
   return createPortal(
     <div style={{position:"fixed",inset:0,background:"#000d",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
-      <div style={{background:T.dim,width:winW>=1024?800:"90vw",maxWidth:"96vw",maxHeight:"90vh",display:"flex",flexDirection:"column",borderRadius:16,overflow:"hidden",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:T.dim,width:winW>=1024?800:"90vw",maxWidth:"96vw",maxHeight:"90vh",display:"flex",flexDirection:"column",borderRadius:16,overflow:"hidden",boxShadow:"0 20px 60px #0009",position:"relative"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",flex:1,minHeight:0}}>
           {sidebar(sideW)}
           <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
@@ -620,6 +643,7 @@ function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
             {footer}
           </div>
         </div>
+        {isSaving&&<div style={{position:"absolute",inset:0,background:"#000",opacity:0.5,pointerEvents:"all",zIndex:10}}/>}
       </div>
     </div>,
     document.body
@@ -631,8 +655,16 @@ function AliasEditModal({booking,onSave,onDelete,onClose,T}){
   const [form,setForm]=useState({...booking,bandPay:String(booking.bandPay),bookingFee:String(booking.bookingFee||"")});
   const [section,setSection]=useState("detaljer");
   const [askDel,setAskDel]=useState(false);
+  const [isSaving,setIsSaving]=useState(false);
+  const [saveSuccess,setSaveSuccess]=useState(false);
+  const [saveError,setSaveError]=useState(null);
   const winW=useWindowWidth();
   const isMobile=winW<768;
+  useEffect(()=>{
+    const handler=e=>{if(isSaving){e.preventDefault();e.returnValue='';}};
+    window.addEventListener('beforeunload',handler);
+    return()=>window.removeEventListener('beforeunload',handler);
+  },[isSaving]);
   const dateStr=booking.date?new Date(booking.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"}):"";
   const SECS=[{id:"detaljer",label:"Detaljer"},{id:"ansvarlig",label:"Ansvarlig"},{id:"note",label:"Note"},{id:"historik",label:"Historik"}];
 
@@ -676,7 +708,17 @@ function AliasEditModal({booking,onSave,onDelete,onClose,T}){
     return(<div style={{color:T.border,fontFamily:"'Poppins',sans-serif",fontSize:12,padding:"20px 0"}}>Ingen ændringer endnu.</div>);
   };
 
-  const doSave=()=>onSave({...form,bandPay:parseFloat(form.bandPay)||0,bookingFee:parseFloat(form.bookingFee)||0,carGear:form.carGear===true||form.carGear==="ja",musicians:parseInt(form.musicians)||0});
+  const doSave=async()=>{
+    setIsSaving(true);setSaveError(null);
+    const payload={...form,bandPay:parseFloat(form.bandPay)||0,bookingFee:parseFloat(form.bookingFee)||0,carGear:form.carGear===true||form.carGear==="ja",musicians:parseInt(form.musicians)||0};
+    try{
+      const res=await fetch('/api/alias',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d.error||`Fejl ${res.status}`);}
+      setSaveSuccess(true);
+      setTimeout(()=>{setSaveSuccess(false);onSave(payload);},800);
+    }catch(e){setSaveError(e.message||"Kunne ikke gemme. Prøv igen.");}
+    finally{setIsSaving(false);}
+  };
 
   const sidebar=(sideW)=>(
     <div style={{width:sideW,background:T.black,display:"flex",flexDirection:"column",flexShrink:0}}>
@@ -697,19 +739,22 @@ function AliasEditModal({booking,onSave,onDelete,onClose,T}){
   );
 
   const footer=(
-    <div style={{padding:"14px 24px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",background:T.dim,flexShrink:0}}>
-      <Btn onClick={()=>setAskDel(true)} color={T.red} small>FJERN JOB</Btn>
-      <div style={{display:"flex",gap:8}}>
-        <Btn onClick={onClose} color={T.muted} small>ANNULLER</Btn>
-        <Btn onClick={doSave} color={T.orange} small>GEM</Btn>
+    <div style={{padding:"14px 24px",borderTop:`1px solid ${T.border}`,background:T.dim,flexShrink:0}}>
+      <div style={{display:"flex",justifyContent:"space-between"}}>
+        <Btn onClick={()=>setAskDel(true)} color={T.red} small disabled={isSaving}>FJERN JOB</Btn>
+        <div style={{display:"flex",gap:8}}>
+          <Btn onClick={onClose} color={T.muted} small disabled={isSaving}>ANNULLER</Btn>
+          <Btn onClick={doSave} color={saveSuccess?T.green:T.orange} small disabled={isSaving||saveSuccess}>{isSaving?"GEMMER...":saveSuccess?"Gemt ✓":"GEM"}</Btn>
+        </div>
       </div>
+      {saveError&&<div style={{fontSize:11,color:T.red,marginTop:8,textAlign:"right",fontFamily:"'Poppins',sans-serif"}}>{saveError}</div>}
     </div>
   );
 
   if(isMobile){
     return createPortal(
       <div style={{position:"fixed",inset:0,background:"#000d",zIndex:200,display:"flex",alignItems:"flex-end"}}>
-        <div style={{background:T.dim,width:"100%",maxHeight:"95vh",display:"flex",flexDirection:"column",borderRadius:"16px 16px 0 0"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:T.dim,width:"100%",maxHeight:"95vh",display:"flex",flexDirection:"column",borderRadius:"16px 16px 0 0",position:"relative"}} onClick={e=>e.stopPropagation()}>
           <div style={{display:"flex",overflowX:"auto",borderBottom:`1px solid ${T.border}`,padding:"0 4px",flexShrink:0}}>
             {SECS.map(s=>(<button key={s.id} onClick={()=>setSection(s.id)}
               style={{padding:"14px 18px",background:"transparent",border:"none",borderBottom:section===s.id?`2px solid ${T.orange}`:"2px solid transparent",color:section===s.id?T.orange:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:section===s.id?700:400,letterSpacing:"0.08em",whiteSpace:"nowrap",flexShrink:0}}>
@@ -722,6 +767,7 @@ function AliasEditModal({booking,onSave,onDelete,onClose,T}){
           </div>
           <div style={{flex:1,overflowY:"auto",padding:20}}>{renderSection()}</div>
           {footer}
+          {isSaving&&<div style={{position:"absolute",inset:0,background:"#000",opacity:0.5,pointerEvents:"all",zIndex:10,borderRadius:"16px 16px 0 0"}}/>}
         </div>
       </div>,
       document.body
@@ -731,7 +777,7 @@ function AliasEditModal({booking,onSave,onDelete,onClose,T}){
   const sideW=winW>=1024?180:160;
   return createPortal(
     <div style={{position:"fixed",inset:0,background:"#000d",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
-      <div style={{background:T.dim,width:winW>=1024?800:"90vw",maxWidth:"96vw",maxHeight:"90vh",display:"flex",flexDirection:"column",borderRadius:16,overflow:"hidden",boxShadow:"0 20px 60px #0009"}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:T.dim,width:winW>=1024?800:"90vw",maxWidth:"96vw",maxHeight:"90vh",display:"flex",flexDirection:"column",borderRadius:16,overflow:"hidden",boxShadow:"0 20px 60px #0009",position:"relative"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",flex:1,minHeight:0}}>
           {sidebar(sideW)}
           <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
@@ -739,6 +785,7 @@ function AliasEditModal({booking,onSave,onDelete,onClose,T}){
             {footer}
           </div>
         </div>
+        {isSaving&&<div style={{position:"absolute",inset:0,background:"#000",opacity:0.5,pointerEvents:"all",zIndex:10}}/>}
       </div>
     </div>,
     document.body
