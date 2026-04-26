@@ -6,25 +6,27 @@ import Image from "next/image";
 
 const NA = {
   black:   "#181719",
-  white:   "#F8F5E6",
   cream:   "#F8F5E6",
   muted:   "#B0A8A4",
   subText: "#7A7470",
-  amber:   "#D4A843",
   orange:  "#D4622A",
-  green:   "#1E7B5B",
-  purple:  "#8B3FA8",
   red:     "#C04A3A",
 };
+
+const SYMBOL_SRC = "/brand/NA_symbol_transparent.png";
 
 function Field({ label, value, onChange, type = "text", placeholder, autoFocus }) {
   const [focus, setFocus] = useState(false);
   return (
     <label style={{ display: "block" }}>
       <div style={{
-        fontSize: 9, color: focus ? NA.orange : "#7A6B5C",
-        letterSpacing: "0.18em", fontFamily: "'Poppins',sans-serif",
-        fontWeight: 700, marginBottom: 6, transition: "color .2s",
+        fontSize: 9,
+        color: focus ? NA.orange : "#7A6B5C",
+        letterSpacing: "0.18em",
+        fontFamily: "'Poppins',sans-serif",
+        fontWeight: 700,
+        marginBottom: 6,
+        transition: "color .2s",
       }}>{label}</div>
       <input
         type={type}
@@ -41,7 +43,8 @@ function Field({ label, value, onChange, type = "text", placeholder, autoFocus }
           borderBottom: `1px solid ${focus ? NA.orange : "#C8C0A8"}`,
           padding: "10px 0", color: NA.black,
           fontSize: 15, fontFamily: "'Poppins',sans-serif",
-          fontWeight: 500, outline: "none", transition: "border-color .25s",
+          fontWeight: 500, outline: "none",
+          transition: "border-color .25s",
         }}
       />
     </label>
@@ -98,101 +101,46 @@ function LoginPage() {
   }
 
   return (
-    <main className="na-login-main" style={{
-      minHeight: "100vh", background: NA.black, color: NA.white,
-      fontFamily: "'Poppins',sans-serif", display: "flex",
-    }}>
+    <main className="na-login">
 
       {/* ── LEFT — dark editorial panel ── */}
-      <section className="na-login-left" style={{
-        position: "relative", flex: "1 1 55%",
-        padding: "40px 44px",
-        display: "flex", flexDirection: "column", justifyContent: "space-between",
-        overflow: "hidden", minHeight: "100vh",
-      }}>
-        {/* Northern Light orbs */}
-        <div aria-hidden="true" style={{
-          position: "absolute", top: -120, left: -120, width: 480, height: 480,
-          borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none",
-          background: `radial-gradient(circle, ${NA.purple}55 0%, transparent 70%)`,
-        }} />
-        <div aria-hidden="true" style={{
-          position: "absolute", top: 80, right: -160, width: 420, height: 420,
-          borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none",
-          background: `radial-gradient(circle, ${NA.green}40 0%, transparent 70%)`,
-        }} />
-        <div aria-hidden="true" style={{
-          position: "absolute", bottom: -160, left: 80, width: 520, height: 520,
-          borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none",
-          background: `radial-gradient(circle, ${NA.amber}30 0%, transparent 70%)`,
-        }} />
+      <section className="na-login-left">
+        <div aria-hidden="true" className="na-spotlight" />
 
-        {/* Header lockup */}
-        <header style={{
-          position: "relative", display: "flex",
-          justifyContent: "space-between", alignItems: "flex-start",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <Image src="/brand/NA_symbol_transparent.png" alt="" width={44} height={44} priority
-              style={{ display: "block", flexShrink: 0 }} />
+        <header className="na-top">
+          <div className="na-lockup">
+            <Image src={SYMBOL_SRC} alt="" width={48} height={48} priority
+              className="na-symbol" style={{ display: "block" }} />
             <div>
-              <div style={{
-                fontSize: 11, letterSpacing: "0.28em", color: NA.white,
-                fontWeight: 700, lineHeight: 1.1,
-              }}>NORTH AVENUE</div>
-              <div style={{
-                fontSize: 9, letterSpacing: "0.32em", color: NA.orange,
-                fontWeight: 700, marginTop: 3,
-              }}>BACKSTAGE</div>
+              <div className="na-brand">NORTH AVENUE</div>
+              <div className="na-brand-sub">BACKSTAGE</div>
             </div>
           </div>
-          <div style={{ fontSize: 9, letterSpacing: "0.32em", color: NA.muted, fontWeight: 600 }}>
-            2026
-          </div>
+          <div className="na-year">2026</div>
         </header>
 
-        {/* Editorial statement */}
-        <div style={{ position: "relative" }}>
-          <div style={{
-            fontSize: 9, letterSpacing: "0.32em", color: NA.amber,
-            fontWeight: 700, marginBottom: 18,
-          }}>DANMARKS ULTIMATIVE FESTBAND</div>
-          <h1 style={{
-            fontFamily: "'Trirong',serif", fontWeight: 400,
-            fontSize: "clamp(40px, 5vw, 62px)", lineHeight: 1.0,
-            color: NA.white, letterSpacing: "-0.02em", maxWidth: 540, margin: 0,
-          }}>
-            Hvor{" "}
-            <em style={{ fontStyle: "italic", color: NA.amber }}>scenelyset</em>
+        <div className="na-statement">
+          <div className="na-kicker">DANMARKS ULTIMATIVE FESTBAND</div>
+          <h1 className="na-headline">
+            Hvor <em className="na-em-orange">scenelyset</em>
             <br />
-            møder <em style={{ fontStyle: "italic" }}>backstage</em>.
+            møder <em>backstage</em>.
           </h1>
-          <p style={{ marginTop: 22, fontSize: 14, color: NA.muted, maxWidth: 440, lineHeight: 1.6 }}>
+          <p className="na-lede">
             Internt system for musikere, vikarer og alias.<br />
             Jobs · Lønoversigt · Booking · Alias.
           </p>
         </div>
 
-        <div /> {/* flex spacer */}
+        <div />
       </section>
 
       {/* ── RIGHT — cream form panel ── */}
-      <section className="na-login-right" style={{
-        flex: "0 0 440px", background: NA.cream, color: NA.black,
-        padding: "56px 52px",
-        display: "flex", flexDirection: "column", justifyContent: "center",
-        position: "relative",
-      }}>
-        <div style={{ marginBottom: 36 }}>
-          <div style={{
-            fontSize: 9, color: NA.orange, letterSpacing: "0.32em",
-            fontWeight: 700, marginBottom: 14,
-          }}>LOG IND</div>
-          <h2 style={{
-            fontFamily: "'Trirong',serif", fontSize: 42, fontWeight: 500,
-            color: NA.black, lineHeight: 1.05, letterSpacing: "-0.01em", margin: 0,
-          }}>Backstage</h2>
-          <p style={{ fontSize: 13, color: "#5A4A40", marginTop: 10, lineHeight: 1.55 }}>
+      <section className="na-login-right">
+        <div className="na-form-head">
+          <div className="na-form-kicker">LOG IND</div>
+          <h2 className="na-form-title">Backstage</h2>
+          <p className="na-form-lede">
             Login for at se jobs, løn, alias og bookinger.
           </p>
         </div>
@@ -200,32 +148,29 @@ function LoginPage() {
         {activated && (
           <div style={{
             marginBottom: 20, padding: "10px 14px",
-            background: `${NA.green}18`, border: `1px solid ${NA.green}55`,
-            fontSize: 12, color: NA.green, fontWeight: 600,
+            background: "#1E7B5B18", border: "1px solid #1E7B5B55",
+            fontSize: 12, color: "#1E7B5B", fontWeight: 600,
           }}>
             ✓ Konto aktiveret! Log ind med din Google-konto for at fortsætte.
           </div>
         )}
         {selfDeleted && (
           <div style={{
-            marginBottom: 20, fontSize: 12, color: NA.subText, textAlign: "center",
+            marginBottom: 20, fontSize: 12,
+            color: NA.subText, textAlign: "center",
           }}>
             Din profil er arkiveret.
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+        <form onSubmit={handleSubmit} className="na-form">
           <Field label="E-MAIL" type="email" value={email} onChange={setEmail}
             placeholder="navn@na.dk" autoFocus={true} />
           <Field label="ADGANGSKODE" type="password" value={pw} onChange={setPw}
             placeholder="••••••••" />
 
           {error && (
-            <div role="alert" style={{
-              fontSize: 11, color: NA.red, letterSpacing: "0.06em", fontWeight: 600,
-              padding: "6px 10px", background: `${NA.red}14`,
-              borderLeft: `2px solid ${NA.red}`,
-            }}>{error}</div>
+            <div role="alert" className="na-error">{error}</div>
           )}
 
           <button
@@ -233,70 +178,223 @@ function LoginPage() {
             disabled={loading}
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
-            style={{
-              marginTop: 6, padding: "15px",
-              background: hover && !loading ? NA.orange : NA.black,
-              color: NA.cream, border: "none",
-              fontFamily: "'Poppins',sans-serif",
-              fontWeight: 700, fontSize: 11, letterSpacing: "0.22em",
-              cursor: loading ? "wait" : "pointer",
-              transition: "background .25s", opacity: loading ? 0.6 : 1,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-            }}
+            className="na-primary"
+            style={{ background: hover && !loading ? NA.orange : NA.black }}
           >
             {loading ? "LOGGER IND..." : <span>LOG IND <span>→</span></span>}
           </button>
         </form>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "22px 0 14px" }}>
-          <div style={{ flex: 1, height: 1, background: "#D8D2BC" }} />
-          <span style={{ color: NA.subText, fontSize: 9, letterSpacing: "0.2em", fontWeight: 600 }}>
-            ELLER
-          </span>
-          <div style={{ flex: 1, height: 1, background: "#D8D2BC" }} />
+        <div className="na-divider">
+          <div className="na-divider-line" />
+          <span>ELLER</span>
+          <div className="na-divider-line" />
         </div>
 
-        <button
-          type="button"
-          onClick={handleGoogle}
-          style={{
-            width: "100%", padding: "13px",
-            background: NA.cream, color: NA.black,
-            border: `1px solid ${NA.black}`,
-            fontFamily: "'Poppins',sans-serif",
-            fontWeight: 600, fontSize: 11, letterSpacing: "0.14em",
-            cursor: "pointer", transition: "background .2s",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#EDE8D2"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = NA.cream; }}
-        >
+        <button type="button" onClick={handleGoogle} className="na-secondary">
           <GoogleIcon />FORTSÆT MED GOOGLE
         </button>
 
-        <p style={{ marginTop: 20, fontSize: 11, color: NA.subText, textAlign: "center" }}>
+        <p className="na-forgot">
           Glemt adgangskode?{" "}
-          <a href="mailto:magnus@northavenue.dk"
-            style={{ color: NA.orange, fontWeight: 700, textDecoration: "none" }}>
-            Skriv til Magnus
-          </a>
+          <a href="mailto:magnus@northavenue.dk">Skriv til Magnus</a>
         </p>
 
-        <footer style={{
-          position: "absolute", bottom: 24, left: 52, right: 52,
-          fontSize: 9, letterSpacing: "0.22em", color: NA.subText, fontWeight: 600,
-          display: "flex", justifyContent: "space-between",
-        }}>
+        <footer className="na-footer">
           <span>NORTHAVENUE.DK</span>
           <span>v2.2</span>
         </footer>
       </section>
 
       <style>{`
-        @media (max-width: 880px) {
-          .na-login-main  { flex-direction: column !important; }
-          .na-login-left  { min-height: 60vh !important; flex: 0 0 auto !important; padding: 32px 28px !important; }
-          .na-login-right { flex: 1 1 auto !important; padding: 40px 28px 80px !important; justify-content: flex-start !important; }
+        .na-login {
+          min-height: 100vh;
+          background: ${NA.black};
+          color: ${NA.cream};
+          font-family: 'Poppins', sans-serif;
+          display: flex;
+        }
+
+        /* ── LEFT ── */
+        .na-login-left {
+          position: relative;
+          flex: 1 1 auto;
+          padding: 44px 56px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          min-height: 100vh;
+          overflow: hidden;
+          gap: 0;
+        }
+        .na-spotlight {
+          position: absolute;
+          top: -360px;
+          left: -240px;
+          width: 1100px;
+          height: 1100px;
+          border-radius: 50%;
+          filter: blur(70px);
+          background: radial-gradient(
+            circle at 30% 25%,
+            ${NA.orange}d9 0%,
+            ${NA.orange}80 18%,
+            ${NA.orange}33 38%,
+            ${NA.orange}0d 58%,
+            transparent 75%
+          );
+          pointer-events: none;
+        }
+        .na-top {
+          position: absolute;
+          top: 44px; left: 56px; right: 56px;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          z-index: 2;
+        }
+        .na-lockup { display: flex; align-items: center; gap: 14px; }
+        .na-symbol { width: 48px; height: 48px; }
+        .na-brand {
+          font-size: 11px; letter-spacing: 0.28em;
+          color: ${NA.cream}; font-weight: 700; line-height: 1.1;
+        }
+        .na-brand-sub {
+          font-size: 9px; letter-spacing: 0.32em;
+          color: ${NA.orange}; font-weight: 700; margin-top: 3px;
+        }
+        .na-year {
+          font-size: 9px; letter-spacing: 0.32em;
+          color: ${NA.muted}; font-weight: 600; padding-top: 6px;
+        }
+        .na-statement { position: relative; max-width: 720px; z-index: 1; }
+        .na-kicker {
+          font-size: 10px; letter-spacing: 0.32em;
+          color: ${NA.orange}; font-weight: 700; margin-bottom: 18px;
+        }
+        .na-headline {
+          font-family: 'Trirong', serif;
+          font-weight: 400;
+          font-size: 78px;
+          line-height: 1.0;
+          color: ${NA.cream};
+          letter-spacing: -0.02em;
+          margin: 0;
+        }
+        .na-headline em { font-style: italic; }
+        .na-em-orange { color: ${NA.orange}; }
+        .na-lede {
+          margin-top: 24px; font-size: 16px;
+          color: ${NA.muted}; max-width: 480px; line-height: 1.6;
+        }
+
+        /* ── RIGHT ── */
+        .na-login-right {
+          flex: 0 0 500px;
+          background: ${NA.cream};
+          color: ${NA.black};
+          padding: 56px 52px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          position: relative;
+          min-height: 100vh;
+        }
+        .na-form-head { margin-bottom: 36px; }
+        .na-form-kicker {
+          font-size: 9px; color: ${NA.orange}; letter-spacing: 0.32em;
+          font-weight: 700; margin-bottom: 14px;
+        }
+        .na-form-title {
+          font-family: 'Trirong', serif;
+          font-size: 44px; font-weight: 500;
+          color: ${NA.black}; line-height: 1.05;
+          letter-spacing: -0.01em; margin: 0;
+        }
+        .na-form-lede {
+          font-size: 13px; color: #5A4A40;
+          margin-top: 10px; line-height: 1.55;
+        }
+        .na-form { display: flex; flex-direction: column; gap: 22px; }
+        .na-error {
+          font-size: 11px; color: ${NA.red};
+          letter-spacing: 0.06em; font-weight: 600;
+          padding: 6px 10px;
+          background: ${NA.red}14;
+          border-left: 2px solid ${NA.red};
+        }
+        .na-primary {
+          margin-top: 6px; padding: 15px;
+          color: ${NA.cream}; border: none;
+          font-family: 'Poppins', sans-serif;
+          font-weight: 700; font-size: 11px; letter-spacing: 0.22em;
+          cursor: pointer;
+          transition: background .25s;
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .na-primary:disabled { opacity: 0.6; cursor: wait; }
+        .na-divider {
+          display: flex; align-items: center; gap: 12px;
+          margin: 22px 0 14px;
+        }
+        .na-divider-line { flex: 1; height: 1px; background: #D8D2BC; }
+        .na-divider span {
+          color: ${NA.subText}; font-size: 9px;
+          letter-spacing: 0.2em; font-weight: 600;
+        }
+        .na-secondary {
+          width: 100%; padding: 13px;
+          background: ${NA.cream}; color: ${NA.black};
+          border: 1px solid ${NA.black};
+          font-family: 'Poppins', sans-serif;
+          font-weight: 600; font-size: 11px; letter-spacing: 0.14em;
+          cursor: pointer; transition: background .2s;
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .na-secondary:hover { background: #EDE8D2; }
+        .na-forgot {
+          margin-top: 20px; font-size: 11px;
+          color: ${NA.subText}; text-align: center;
+        }
+        .na-forgot a { color: ${NA.orange}; font-weight: 700; text-decoration: none; }
+        .na-footer {
+          position: absolute;
+          bottom: 24px; left: 52px; right: 52px;
+          font-size: 9px; letter-spacing: 0.22em;
+          color: ${NA.subText}; font-weight: 600;
+          display: flex; justify-content: space-between;
+        }
+
+        /* Tablet */
+        @media (max-width: 1199px) and (min-width: 760px) {
+          .na-login-right { flex: 0 0 38%; }
+        }
+
+        /* Mobile */
+        @media (max-width: 759px) {
+          .na-login { flex-direction: column; }
+          .na-login-left {
+            min-height: auto;
+            justify-content: flex-start;
+            padding: 44px 24px 91px;
+            gap: 110px;
+          }
+          .na-spotlight {
+            top: -180px; left: -160px;
+            width: 620px; height: 620px;
+          }
+          .na-top { position: relative; top: auto; left: auto; right: auto; }
+          .na-symbol { width: 40px !important; height: 40px !important; }
+          .na-year { display: none; }
+          .na-headline { font-size: 36px; line-height: 1.1; }
+          .na-lede { display: none; }
+          .na-login-right {
+            flex: 1 1 auto; min-height: 0;
+            padding: 44px 24px 56px;
+            justify-content: flex-start;
+          }
+          .na-form-title { font-size: 36px; }
+          .na-footer { display: none; }
         }
       `}</style>
     </main>
