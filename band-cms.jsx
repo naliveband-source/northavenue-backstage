@@ -1201,43 +1201,130 @@ function InfoView({currentUser,T}){
   </div>);
 }
 
+// ── Admin pill helper + accent colours ────────────────────────────────────
+const AMBER  = "#C88B30";
+const PURPLE = "#8B3FA8";
+const BLUE_A = "#4B8B9B";
+const pillStyle = accent => ({
+  padding:"4px 10px", fontSize:10, borderRadius:99, fontWeight:600,
+  fontFamily:"'Poppins',sans-serif", letterSpacing:"0.04em",
+  background:`color-mix(in oklab, ${accent} 16%, transparent)`,
+  color:accent, whiteSpace:"nowrap",
+});
+
 // ── Sortable musician row (DnD) ────────────────────────────────────────────
-function SortableMusicianRow({u,T,onEdit,onDelete,onGenerateLink,onShowLink,inviteLoading,deleting}){
+function SortableMusicianRow({u,T,size,onEdit,onDelete,onGenerateLink,onShowLink,inviteLoading,deleting}){
+  const [menuOpen,setMenuOpen]=useState(false);
   const {attributes,listeners,setNodeRef,transform,transition,isDragging}=useSortable({id:u.id});
-  const style={transform:CSS.Transform.toString(transform),transition,position:"relative",zIndex:isDragging?1:0};
+  const ds={transform:CSS.Transform.toString(transform),transition,position:"relative",zIndex:isDragging?1:0};
   const c=userColor(u);
-  return(
-    <div ref={setNodeRef} style={style}>
-      <div style={{background:isDragging?T.orange+"11":T.dim,padding:"13px 16px",display:"flex",alignItems:"center",gap:12,borderLeft:`2px solid ${c}`,opacity:isDragging?0.8:1}}>
-        <div {...attributes} {...listeners} style={{color:T.muted,cursor:isDragging?"grabbing":"grab",fontSize:13,padding:"2px 4px",flexShrink:0,touchAction:"none",lineHeight:1,userSelect:"none"}}>☰</div>
-        <div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:13,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            {u.first} {u.last}
-            {u.status==="pending"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.muted+"22",color:T.muted,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>AFVENTER</span>}
-            {u.status==="invited"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.orange+"22",color:T.orange,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>INVITERET</span>}
-          </div>
-          <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:1,display:"flex",gap:6,flexWrap:"wrap"}}>
-            {u.email?<span>{u.email}</span>:<span style={{color:T.border,fontStyle:"italic"}}>(ingen email)</span>}
-            {u.instrument&&<span>· {u.instrument}</span>}
-            {(u.tags||[]).map(t=><span key={t} style={{background:T.orange+"22",color:T.orange,padding:"1px 6px",fontSize:9,letterSpacing:"0.07em",fontWeight:700}}>{TAG_LABELS[t]||t}</span>)}
-          </div>
+  const av=sz=>(<div style={{width:sz,height:sz,background:c,borderRadius:sz===40?8:7,display:"grid",placeItems:"center",fontSize:sz===40?13:11,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>);
+  const statusPills=(<>{u.status==="pending"&&<span style={pillStyle(T.muted)}>AFVENTER</span>}{u.status==="invited"&&<span style={pillStyle(BLUE_A)}>INVITERET</span>}</>);
+  const tagPills=(u.tags||[]).map(t=>{const tc=t==="musiker"?T.green:t==="vikar"?AMBER:t==="alias_manager"?PURPLE:T.muted;const tl=t==="musiker"?"Musiker":t==="vikar"?"Vikar":t==="alias_manager"?"Alias ans.":t;return <span key={t} style={pillStyle(tc)}>{tl}</span>;});
+  const infoCol=ns=>(<div style={{flex:1,minWidth:0}}>
+    <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
+      <span style={{fontFamily:"'Trirong',serif",fontSize:ns,fontWeight:600,letterSpacing:"-0.01em",color:T.white}}>{u.first} {u.last}</span>
+      {statusPills}
+      {size==="tablet"&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tagPills}</div>}
+    </div>
+    <div style={{marginTop:2,fontSize:11,fontFamily:"'Poppins',sans-serif"}}>
+      {u.instrument&&<span style={{color:T.muted}}>{u.instrument}</span>}
+      {u.instrument&&u.email&&<span style={{color:T.muted}}> · </span>}
+      {u.email?<span style={{color:T.muted}}>{u.email}</span>:<span style={{color:T.border,fontStyle:"italic"}}>(ingen email)</span>}
+    </div>
+  </div>);
+  const actions=(<div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
+    {(u.status==="pending"||!u.email)&&<button onClick={()=>onGenerateLink(u)} disabled={inviteLoading===u.id} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em",opacity:inviteLoading===u.id?0.6:1}}>{inviteLoading===u.id?"...":"🔗 LINK"}</button>}
+    {u.status==="invited"&&<button onClick={()=>onShowLink(u)} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em"}}>🔗 LINK</button>}
+    <button onClick={()=>onEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
+    <Btn onClick={()=>onDelete(u)} color={T.red} small disabled={deleting}>FJERN</Btn>
+  </div>);
+  const mobileMenu=(<div style={{position:"relative",flexShrink:0}}>
+    <button onClick={()=>setMenuOpen(v=>!v)} style={{padding:"8px 10px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.muted,cursor:"pointer",fontSize:14,minHeight:36,lineHeight:1}}>⋯</button>
+    {menuOpen&&<div style={{position:"absolute",right:0,top:"calc(100% + 4px)",background:T.dim,border:`1px solid ${T.border}`,borderRadius:10,padding:"6px 4px",zIndex:10,minWidth:140,display:"flex",flexDirection:"column",gap:2}}>
+      {(u.status==="pending"||!u.email)&&<button onClick={()=>{onGenerateLink(u);setMenuOpen(false);}} disabled={inviteLoading===u.id} style={{padding:"10px 14px",background:"transparent",border:"none",color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,textAlign:"left",borderRadius:8,opacity:inviteLoading===u.id?0.6:1}}>🔗 Generer link</button>}
+      {u.status==="invited"&&<button onClick={()=>{onShowLink(u);setMenuOpen(false);}} style={{padding:"10px 14px",background:"transparent",border:"none",color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,textAlign:"left",borderRadius:8}}>🔗 Vis link</button>}
+      <button onClick={()=>{onEdit(u);setMenuOpen(false);}} style={{padding:"10px 14px",background:"transparent",border:"none",color:T.white,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,textAlign:"left",borderRadius:8}}>Rediger</button>
+      <button onClick={()=>{onDelete(u);setMenuOpen(false);}} style={{padding:"10px 14px",background:"transparent",border:"none",color:T.red,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,textAlign:"left",borderRadius:8}}>Fjern</button>
+    </div>}
+  </div>);
+  if(size==="mobile"){return(
+    <div ref={setNodeRef} style={{...ds,opacity:isDragging?0.8:1}}>
+      <div style={{padding:"14px 4px",borderBottom:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+          <div {...attributes} {...listeners} style={{marginTop:8,color:T.muted,cursor:isDragging?"grabbing":"grab",fontSize:13,padding:"2px 4px",flexShrink:0,touchAction:"none",lineHeight:1,userSelect:"none"}}>⋮⋮</div>
+          {av(36)}{infoCol(18)}{mobileMenu}
         </div>
-        <div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
-          {u.status==="pending"&&<button onClick={()=>onGenerateLink(u)} disabled={inviteLoading===u.id}
-            style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em",opacity:inviteLoading===u.id?0.6:1}}>
-            {inviteLoading===u.id?"...":"🔗 LINK"}
-          </button>}
-          {u.status==="invited"&&<button onClick={()=>onShowLink(u)}
-            style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em"}}>
-            🔗 LINK
-          </button>}
-          <button onClick={()=>onEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
-          <Btn onClick={()=>onDelete(u)} color={T.red} small disabled={deleting}>FJERN</Btn>
+        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{statusPills}{tagPills}</div>
+      </div>
+    </div>
+  );}
+  const gridCols=size==="desktop"?"auto 40px 1fr auto auto":"auto 40px 1fr auto";
+  return(
+    <div ref={setNodeRef} style={ds}>
+      <div style={{display:"grid",gridTemplateColumns:gridCols,gap:14,alignItems:"center",padding:"16px 4px",borderBottom:`1px solid ${T.border}`,background:isDragging?T.orange+"11":"transparent",opacity:isDragging?0.8:1}}>
+        <div {...attributes} {...listeners} style={{color:T.muted,cursor:isDragging?"grabbing":"grab",fontSize:13,padding:"2px 4px",flexShrink:0,touchAction:"none",lineHeight:1,userSelect:"none",alignSelf:"center"}}>⋮⋮</div>
+        {av(40)}{infoCol(size==="desktop"?22:19)}
+        {size==="desktop"&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tagPills}</div>}
+        {actions}
+      </div>
+    </div>
+  );
+}
+
+// ── Static user row (non-DnD tabs) ─────────────────────────────────────────
+function UserRow({u,T,size,onEdit,onDelete,onGenerateLink,onShowLink,inviteLoading,deleting}){
+  const [menuOpen,setMenuOpen]=useState(false);
+  const c=userColor(u);
+  const av=sz=>(<div style={{width:sz,height:sz,background:c,borderRadius:sz===40?8:7,display:"grid",placeItems:"center",fontSize:sz===40?13:11,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>);
+  const statusPills=(<>{u.status==="pending"&&<span style={pillStyle(T.muted)}>AFVENTER</span>}{u.status==="invited"&&<span style={pillStyle(BLUE_A)}>INVITERET</span>}</>);
+  const tagPills=(u.tags||[]).map(t=>{const tc=t==="musiker"?T.green:t==="vikar"?AMBER:t==="alias_manager"?PURPLE:T.muted;const tl=t==="musiker"?"Musiker":t==="vikar"?"Vikar":t==="alias_manager"?"Alias ans.":t;return <span key={t} style={pillStyle(tc)}>{tl}</span>;});
+  const infoCol=ns=>(<div style={{flex:1,minWidth:0}}>
+    <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
+      <span style={{fontFamily:"'Trirong',serif",fontSize:ns,fontWeight:600,letterSpacing:"-0.01em",color:T.white}}>{u.first} {u.last}</span>
+      {statusPills}
+      {size==="tablet"&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tagPills}</div>}
+    </div>
+    <div style={{marginTop:2,fontSize:11,fontFamily:"'Poppins',sans-serif"}}>
+      {u.instrument&&<span style={{color:T.muted}}>{u.instrument}</span>}
+      {u.instrument&&u.email&&<span style={{color:T.muted}}> · </span>}
+      {u.email?<span style={{color:T.muted}}>{u.email}</span>:<span style={{color:T.border,fontStyle:"italic"}}>(ingen email)</span>}
+    </div>
+  </div>);
+  const actions=(<div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
+    {(u.status==="pending"||!u.email)&&<button onClick={()=>onGenerateLink(u)} disabled={inviteLoading===u.id} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em",opacity:inviteLoading===u.id?0.6:1}}>{inviteLoading===u.id?"...":"🔗 LINK"}</button>}
+    {u.status==="invited"&&<button onClick={()=>onShowLink(u)} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em"}}>🔗 LINK</button>}
+    <button onClick={()=>onEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
+    <Btn onClick={()=>onDelete(u)} color={T.red} small disabled={deleting}>FJERN</Btn>
+  </div>);
+  if(size==="mobile"){return(
+    <div style={{padding:"14px 4px",borderBottom:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:10}}>
+      <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+        {av(36)}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontFamily:"'Trirong',serif",fontSize:18,fontWeight:600,letterSpacing:"-0.01em",lineHeight:1.2,color:T.white}}>{u.first} {u.last}</div>
+          {u.instrument&&<div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{u.instrument}</div>}
+          {u.email&&<div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",wordBreak:"break-all"}}>{u.email}</div>}
+        </div>
+        <div style={{position:"relative",flexShrink:0}}>
+          <button onClick={()=>setMenuOpen(v=>!v)} style={{padding:"8px 10px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.muted,cursor:"pointer",fontSize:14,minHeight:36,lineHeight:1}}>⋯</button>
+          {menuOpen&&<div style={{position:"absolute",right:0,top:"calc(100% + 4px)",background:T.dim,border:`1px solid ${T.border}`,borderRadius:10,padding:"6px 4px",zIndex:10,minWidth:140,display:"flex",flexDirection:"column",gap:2}}>
+            {(u.status==="pending"||!u.email)&&<button onClick={()=>{onGenerateLink(u);setMenuOpen(false);}} disabled={inviteLoading===u.id} style={{padding:"10px 14px",background:"transparent",border:"none",color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,textAlign:"left",borderRadius:8,opacity:inviteLoading===u.id?0.6:1}}>🔗 Generer link</button>}
+            {u.status==="invited"&&<button onClick={()=>{onShowLink(u);setMenuOpen(false);}} style={{padding:"10px 14px",background:"transparent",border:"none",color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,textAlign:"left",borderRadius:8}}>🔗 Vis link</button>}
+            <button onClick={()=>{onEdit(u);setMenuOpen(false);}} style={{padding:"10px 14px",background:"transparent",border:"none",color:T.white,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,textAlign:"left",borderRadius:8}}>Rediger</button>
+            <button onClick={()=>{onDelete(u);setMenuOpen(false);}} style={{padding:"10px 14px",background:"transparent",border:"none",color:T.red,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,textAlign:"left",borderRadius:8}}>Fjern</button>
+          </div>}
         </div>
       </div>
+      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{statusPills}{tagPills}</div>
+    </div>
+  );}
+  const gridCols=size==="desktop"?"40px 1fr auto auto":"40px 1fr auto";
+  return(
+    <div style={{display:"grid",gridTemplateColumns:gridCols,gap:14,alignItems:"center",padding:"16px 4px",borderBottom:`1px solid ${T.border}`}}>
+      {av(40)}{infoCol(size==="desktop"?22:19)}
+      {size==="desktop"&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tagPills}</div>}
+      {actions}
     </div>
   );
 }
@@ -1254,6 +1341,10 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
   const [linkModal,setLinkModal]=useState(null); // { user, link } | null
   const [inviteLoading,setInviteLoading]=useState(null); // userId being processed
   const [copied,setCopied]=useState(false);
+  const [activeTab,setActiveTab]=useState(0);
+  const [search,setSearch]=useState("");
+  const winW=useWindowWidth();
+  const size=winW>=1024?"desktop":winW>=640?"tablet":"mobile";
   const deriveSubType=(isAdm,tags)=>{
     if(isAdm)return "owner";
     if(tags.includes("alias_manager")&&!tags.includes("vikar")&&!tags.includes("musiker"))return "alias";
@@ -1327,90 +1418,164 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
     onReorder(orderedIds);
   };
 
-  const grpDefs=[
-    {key:"owner",   label:"ADMIN / EJERE",    color:T.orange,  filter:u=>u.isAdmin,                         sortable:false},
-    {key:"musiker", label:"MUSIKERE",          color:T.green,   filter:u=>u.tags?.includes("musiker"),        sortable:true},
-    {key:"vikar",   label:"VIKARER",           color:T.muted,   filter:u=>u.tags?.includes("vikar"),          sortable:false},
-    {key:"alias",   label:"ALIAS ANSVARLIGE",  color:"#4B8B9B", filter:u=>u.tags?.includes("alias_manager"),  sortable:false},
+  const tabDefs=[
+    {key:"owner",  label:"Admin / Ejere",    accent:T.orange, filter:u=>u.isAdmin,                        sortable:false, subtitle:"De fire der ejer scenen"},
+    {key:"musiker",label:"Musikere",          accent:T.green,  filter:u=>u.tags?.includes("musiker"),       sortable:true,  subtitle:"Det faste band"},
+    {key:"vikar",  label:"Vikarer",           accent:AMBER,    filter:u=>u.tags?.includes("vikar"),         sortable:false, subtitle:"Når kalenderen kalder"},
+    {key:"alias",  label:"Alias Ansvarlige",  accent:PURPLE,   filter:u=>u.tags?.includes("alias_manager"), sortable:false, subtitle:"Bookings under eget navn"},
+  ];
+  const cur=tabDefs[activeTab];
+  const tabUsers=cur.sortable?sortMusicians(users.filter(cur.filter)):users.filter(cur.filter);
+  const visibleUsers=search?tabUsers.filter(u=>`${u.first} ${u.last} ${u.email||""} ${u.instrument||""}`.toLowerCase().includes(search.toLowerCase())):tabUsers;
+  const counts=tabDefs.map(t=>users.filter(t.filter).length);
+  const pad=n=>String(n).padStart(2,"0");
+  const statCells=[
+    {label:"Total brugere",    n:users.length,                                                    accent:T.white},
+    {label:"Admins / Ejere",   n:users.filter(u=>u.isAdmin).length,                               accent:T.orange},
+    {label:"Faste musikere",   n:users.filter(u=>u.tags?.includes("musiker")).length,              accent:T.green},
+    {label:"Vikarer",          n:users.filter(u=>u.tags?.includes("vikar")).length,                accent:AMBER},
+    {label:"Alias ansvarlige", n:users.filter(u=>u.tags?.includes("alias_manager")).length,        accent:PURPLE},
   ];
 
-  const StaticRow=({u,grpKey})=>{const c=userColor(u);return(
-    <div key={`${grpKey}-${u.id}`} style={{background:T.dim,padding:"13px 16px",display:"flex",alignItems:"center",gap:12,borderLeft:`2px solid ${c}`}}>
-      <div style={{width:34,height:34,background:c+"22",border:`1px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:13,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-          {u.first} {u.last}
-          {u.status==="pending"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.muted+"22",color:T.muted,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>AFVENTER</span>}
-          {u.status==="invited"&&<span style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",padding:"2px 7px",background:T.orange+"22",color:T.orange,borderRadius:20,fontFamily:"'Poppins',sans-serif"}}>INVITERET</span>}
-        </div>
-        <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:1,display:"flex",gap:6,flexWrap:"wrap"}}>
-          {u.email?<span>{u.email}</span>:<span style={{color:T.border,fontStyle:"italic"}}>(ingen email)</span>}
-          {u.instrument&&<span>· {u.instrument}</span>}
-          {(u.tags||[]).map(t=><span key={t} style={{background:T.orange+"22",color:T.orange,padding:"1px 6px",fontSize:9,letterSpacing:"0.07em",fontWeight:700}}>{TAG_LABELS[t]||t}</span>)}
-        </div>
-      </div>
-      <div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
-        {u.status==="pending"&&<button onClick={()=>generateLink(u)} disabled={inviteLoading===u.id}
-          style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em",opacity:inviteLoading===u.id?0.6:1}}>
-          {inviteLoading===u.id?"...":"🔗 LINK"}
-        </button>}
-        {u.status==="invited"&&<button onClick={()=>showLink(u)} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em"}}>🔗 LINK</button>}
-        <button onClick={()=>openEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
-        <Btn onClick={()=>setConfirmRemoveUser(u)} color={T.red} small disabled={deleting}>FJERN</Btn>
-      </div>
-    </div>
-  );};
+  return(<div>
 
-  return(<div style={{maxWidth:760}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-      <div style={{fontSize:9,color:T.orange,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700}}>BRUGERE & MUSIKERE · {users.length}</div>
-      <Btn onClick={openNew} color={T.orange} small>+ OPRET BRUGER</Btn>
+    {/* PAGE HEADER */}
+    <div style={{marginBottom:18}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+        <div style={{width:6,height:6,borderRadius:99,background:T.orange,flexShrink:0}}/>
+        <div style={{fontSize:10,color:T.muted,letterSpacing:"0.18em",fontFamily:"'Poppins',sans-serif",fontWeight:700,textTransform:"uppercase"}}>Brugere og indstillinger</div>
+      </div>
+      <h1 style={{margin:0,fontSize:size==="desktop"?42:size==="tablet"?34:28,fontWeight:900,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.01em",color:T.white,lineHeight:1.05}}>ADMINISTRATION</h1>
     </div>
-    {grpDefs.map(grp=>{
-      const grpUsers=grp.sortable?sortMusicians(users.filter(grp.filter)):users.filter(grp.filter);
-      if(!grpUsers.length)return null;
-      return(<div key={grp.key} style={{marginBottom:20}}>
-        <div style={{fontSize:9,color:grp.color,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8}}>{grp.label} · {grpUsers.length}</div>
-        {grp.sortable?(
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={grpUsers.map(u=>u.id)} strategy={verticalListSortingStrategy}>
-              <div style={{display:"flex",flexDirection:"column",gap:1,background:T.border}}>
-                {grpUsers.map(u=><SortableMusicianRow key={`${grp.key}-${u.id}`} u={u} T={T}
-                  onEdit={openEdit} onDelete={setConfirmRemoveUser}
-                  onGenerateLink={generateLink} onShowLink={showLink}
-                  inviteLoading={inviteLoading} deleting={deleting}/>)}
+
+    {/* STAT STRIP */}
+    <div style={{border:`1px solid ${T.border}`,borderRadius:14,overflow:"hidden",marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:size==="desktop"?"repeat(5,1fr)":size==="tablet"?"repeat(3,1fr)":"repeat(2,1fr)",gap:1,background:T.border}}>
+        {statCells.map(({label,n,accent})=>(
+          <div key={label} style={{padding:size==="mobile"?12:18,background:T.dim}}>
+            <div style={{fontSize:size==="mobile"?9:10,color:accent,letterSpacing:"0.18em",fontFamily:"'Poppins',sans-serif",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{label}</div>
+            <div style={{fontFamily:"'Trirong',serif",fontSize:size==="desktop"?36:size==="tablet"?28:22,fontWeight:600,lineHeight:1,color:T.white}}>{pad(n)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* ROLE TABS — MOBILE: 2×2 pill grid */}
+    {size==="mobile"?(
+      <div style={{borderBottom:`1px solid ${T.border}`,paddingBottom:12,marginBottom:0,display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+          {tabDefs.map((t,i)=>{const active=activeTab===i;return(
+            <button key={t.key} onClick={()=>{setActiveTab(i);setSearch("");}}
+              style={{padding:"10px 12px",borderRadius:10,minHeight:44,border:`1px solid ${active?t.accent:T.border}`,
+                background:active?`color-mix(in oklab, ${t.accent} 14%, transparent)`:"transparent",
+                display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,
+                color:active?T.white:T.muted,cursor:"pointer",textAlign:"left"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
+                <div style={{width:6,height:6,borderRadius:99,background:t.accent,flexShrink:0}}/>
+                <span style={{fontSize:10,fontWeight:700,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.12em",textTransform:"uppercase",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.label}</span>
               </div>
-            </SortableContext>
-          </DndContext>
-        ):(
-          <div style={{display:"flex",flexDirection:"column",gap:1,background:T.border}}>
-            {grpUsers.map(u=><StaticRow key={`${grp.key}-${u.id}`} u={u} grpKey={grp.key}/>)}
+              <span style={{fontFamily:"'Trirong',serif",fontStyle:"italic",fontWeight:600,fontSize:13,color:active?t.accent:T.muted,flexShrink:0}}>{pad(counts[i])}</span>
+            </button>
+          );})}
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Søg..." style={{flex:1,padding:"10px 12px",fontSize:12,background:T.dim,border:`1px solid ${T.border}`,borderRadius:8,color:T.white,fontFamily:"'Poppins',sans-serif",outline:"none"}}/>
+          <Btn onClick={openNew} color={T.orange} small>+ Opret</Btn>
+        </div>
+      </div>
+    ):(
+      /* ROLE TABS — DESKTOP / TABLET */
+      <>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",borderBottom:`1px solid ${T.border}`}}>
+          <div style={{display:"flex",gap:0}}>
+            {tabDefs.map((t,i)=>{const active=activeTab===i;return(
+              <button key={t.key} onClick={()=>{setActiveTab(i);setSearch("");}}
+                style={{padding:"14px 18px",background:"transparent",border:0,cursor:"pointer",position:"relative",
+                  fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,letterSpacing:"0.14em",textTransform:"uppercase",
+                  color:active?T.white:T.muted,transition:"color .15s"}}>
+                {t.label}
+                <span style={{color:T.muted,fontWeight:500,marginLeft:6}}>{counts[i]}</span>
+                {active&&<div style={{position:"absolute",left:0,right:0,bottom:-1,height:2,background:t.accent}}/>}
+              </button>
+            );})}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,paddingBottom:12}}>
+            {size==="desktop"&&<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Søg..." style={{padding:"8px 12px",fontSize:12,width:180,background:T.dim,border:`1px solid ${T.border}`,borderRadius:8,color:T.white,fontFamily:"'Poppins',sans-serif",outline:"none"}}/>}
+            <Btn onClick={openNew} color={T.orange} small>+ Opret bruger</Btn>
+          </div>
+        </div>
+        {size==="tablet"&&(
+          <div style={{display:"flex",gap:8,paddingTop:10}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Søg..." style={{flex:1,padding:"8px 12px",fontSize:12,background:T.dim,border:`1px solid ${T.border}`,borderRadius:8,color:T.white,fontFamily:"'Poppins',sans-serif",outline:"none"}}/>
           </div>
         )}
-      </div>);
-    })}
-    <div style={{background:T.dim,padding:22,borderRadius:12,marginTop:8}}>
-      <div style={{fontSize:9,color:T.green,letterSpacing:"0.14em",fontFamily:"'Poppins',sans-serif",fontWeight:700,marginBottom:8}}>HUBSPOT SYNC</div>
-      <div style={{fontSize:13,color:T.muted,marginBottom:14,fontFamily:"'Poppins',sans-serif"}}>Synkronisering køres automatisk hver time via HubSpot API.</div>
-      <Btn onClick={async()=>{
-        setSyncState({loading:true,msg:null});
-        try{
-          const res=await fetch("/api/hubspot/sync");
-          const data=await res.json();
-          if(data.ok){
-            setSyncState({loading:false,msg:{err:false,text:`✓ Synkroniseret: ${data.synced.northAvenue} NA jobs, ${data.synced.alias} Alias jobs`}});
-            setTimeout(()=>window.location.reload(),1500);
-          } else {
-            setSyncState({loading:false,msg:{err:true,text:data.error||"Fejl ved synk"}});
-          }
-        }catch(e){
-          setSyncState({loading:false,msg:{err:true,text:"Netværksfejl: "+e.message}});
-        }
-      }} color={T.orange}>{syncState.loading?"SYNKRONISERER...":"SYNKRONISER NU →"}</Btn>
-      {syncState.msg&&<div style={{marginTop:12,fontSize:12,color:syncState.msg.err?T.red:T.green,fontFamily:"'Poppins',sans-serif"}}>{syncState.msg.text}</div>}
+      </>
+    )}
+
+    {/* SECTION HEADER */}
+    <div style={{padding:"20px 0 8px"}}>
+      <div style={{fontSize:10,color:cur.accent,letterSpacing:"0.18em",fontFamily:"'Poppins',sans-serif",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{cur.label}</div>
+      <div style={{fontFamily:"'Trirong',serif",fontStyle:"italic",fontSize:16,color:T.muted}}>{cur.subtitle}</div>
     </div>
+
+    {/* USER LIST */}
+    <div style={{borderTop:`1px solid ${T.border}`}}>
+      {cur.sortable?(
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={visibleUsers.map(u=>u.id)} strategy={verticalListSortingStrategy}>
+            {visibleUsers.map(u=>(
+              <SortableMusicianRow key={u.id} u={u} T={T} size={size}
+                onEdit={openEdit} onDelete={setConfirmRemoveUser}
+                onGenerateLink={generateLink} onShowLink={showLink}
+                inviteLoading={inviteLoading} deleting={deleting}/>
+            ))}
+          </SortableContext>
+        </DndContext>
+      ):(
+        visibleUsers.map(u=>(
+          <UserRow key={u.id} u={u} T={T} size={size}
+            onEdit={openEdit} onDelete={setConfirmRemoveUser}
+            onGenerateLink={generateLink} onShowLink={showLink}
+            inviteLoading={inviteLoading} deleting={deleting}/>
+        ))
+      )}
+      {visibleUsers.length===0&&(
+        <div style={{padding:"32px 4px",textAlign:"center",color:T.muted,fontFamily:"'Poppins',sans-serif",fontSize:13}}>
+          {search?`Ingen resultater for "${search}"`:"Ingen brugere i denne gruppe."}
+        </div>
+      )}
+    </div>
+
+    {/* HUBSPOT SYNC CARD */}
+    <div style={{marginTop:24,background:T.dim,border:`1px solid ${T.border}`,borderRadius:14,padding:size==="mobile"?16:24,display:"flex",flexDirection:size==="mobile"?"column":"row",alignItems:size==="mobile"?"stretch":"center",gap:size==="mobile"?12:16,flexWrap:"wrap"}}>
+      <div style={{display:"flex",alignItems:"center",gap:16,flex:1,minWidth:0}}>
+        <div style={{width:36,height:36,borderRadius:8,background:`color-mix(in oklab, ${T.green} 18%, transparent)`,display:"grid",placeItems:"center",color:T.green,fontSize:18,fontWeight:700,flexShrink:0}}>↻</div>
+        <div>
+          <div style={{fontSize:10,color:T.green,letterSpacing:"0.18em",fontFamily:"'Poppins',sans-serif",fontWeight:700,textTransform:"uppercase",marginBottom:2}}>HUBSPOT SYNC</div>
+          <div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>Automatisk synkronisering hver time via HubSpot API.</div>
+        </div>
+      </div>
+      <div style={{flexShrink:0,width:size==="mobile"?"100%":undefined}}>
+        <Btn onClick={async()=>{
+          setSyncState({loading:true,msg:null});
+          try{
+            const res=await fetch("/api/hubspot/sync");
+            const data=await res.json();
+            if(data.ok){
+              setSyncState({loading:false,msg:{err:false,text:`✓ ${data.synced.northAvenue} NA jobs, ${data.synced.alias} Alias jobs synkroniseret`}});
+              setTimeout(()=>window.location.reload(),1500);
+            }else{
+              setSyncState({loading:false,msg:{err:true,text:data.error||"Fejl ved synk"}});
+            }
+          }catch(e){
+            setSyncState({loading:false,msg:{err:true,text:"Netværksfejl: "+e.message}});
+          }
+        }} color={T.orange} style={size==="mobile"?{width:"100%"}:{}}>{syncState.loading?"SYNKRONISERER...":"Synkronisér nu →"}</Btn>
+      </div>
+      {syncState.msg&&<div style={{width:"100%",fontSize:12,color:syncState.msg.err?T.red:T.green,fontFamily:"'Poppins',sans-serif"}}>{syncState.msg.text}</div>}
+    </div>
+
+    {/* MODALS (unchanged) */}
     {confirmRemoveUser&&<ConfirmModal message={`Er du sikker på at du vil fjerne "${confirmRemoveUser.first} ${confirmRemoveUser.last}"? Handlingen kan ikke fortrydes.`} confirmLoading={deleting} onConfirm={async()=>{
       setDeleting(true);
       try{
@@ -1427,9 +1592,7 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
         <div style={{fontSize:13,color:T.muted,fontFamily:"'Poppins',sans-serif",marginBottom:16,lineHeight:1.5}}>Send dette link til <strong style={{color:T.white}}>{linkModal.user.first}</strong> via SMS, mail eller besked. Linket udløber om 14 dage.</div>
         <div style={{display:"flex",gap:8,alignItems:"stretch",marginBottom:16}}>
           <input readOnly value={linkModal.link} style={{flex:1,background:T.black,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 12px",color:T.white,fontSize:11,fontFamily:"'Poppins',sans-serif",outline:"none",minWidth:0}} onClick={e=>e.target.select()}/>
-          <button onClick={()=>copyLink(linkModal.link)} style={{padding:"10px 16px",background:copied?T.green:T.orange,border:"none",borderRadius:8,color:"#F8F5E6",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Poppins',sans-serif",flexShrink:0,transition:"background .2s"}}>
-            {copied?"KOPIERET ✓":"KOPIER"}
-          </button>
+          <button onClick={()=>copyLink(linkModal.link)} style={{padding:"10px 16px",background:copied?T.green:T.orange,border:"none",borderRadius:8,color:"#F8F5E6",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"'Poppins',sans-serif",flexShrink:0,transition:"background .2s"}}>{copied?"KOPIERET ✓":"KOPIER"}</button>
         </div>
         <div style={{display:"flex",justifyContent:"flex-end"}}>
           <Btn onClick={()=>setLinkModal(null)} color={T.muted} small>LUK</Btn>
