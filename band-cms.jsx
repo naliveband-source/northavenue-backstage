@@ -1454,7 +1454,7 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
         {statCells.map(({label,n,accent})=>(
           <div key={label} style={{padding:size==="mobile"?12:18,background:T.dim}}>
             <div style={{fontSize:size==="mobile"?9:10,color:accent,letterSpacing:"0.18em",fontFamily:"'Poppins',sans-serif",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{label}</div>
-            <div style={{fontFamily:"'Trirong',serif",fontSize:size==="desktop"?36:size==="tablet"?28:22,fontWeight:600,lineHeight:1,color:T.white}}>{pad(n)}</div>
+            <div style={{fontFamily:"'Poppins',sans-serif",fontSize:size==="desktop"?36:size==="tablet"?28:22,fontWeight:800,letterSpacing:"-0.02em",lineHeight:1,color:T.white}}>{pad(n)}</div>
           </div>
         ))}
       </div>
@@ -2011,10 +2011,10 @@ export default function App(){
     <div style={{marginLeft:isMobile?0:isTablet?180:240,flex:1,padding:isMobile?"72px 16px 24px":isTablet?"24px":40,minWidth:0}}>
       <div style={{position:"fixed",top:0,right:0,width:"40%",height:"40%",background:`radial-gradient(ellipse at top right,${T.orange}07 0%,transparent 70%)`,pointerEvents:"none",zIndex:0}}/>
       <div style={{position:"relative",zIndex:1}}>
-        <div style={{marginBottom:isMobile?16:28,paddingBottom:isMobile?12:20,borderBottom:`1px solid ${T.border}`}}>
+        {effectiveView!=="admin"&&<div style={{marginBottom:isMobile?16:28,paddingBottom:isMobile?12:20,borderBottom:`1px solid ${T.border}`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><NAStar size={10} color={T.orange} opacity={0.6}/><span style={{fontSize:9,color:T.muted,letterSpacing:"0.14em"}}>{meta[effectiveView]?.sub}</span></div>
           <h1 style={{fontSize:isMobile?18:isTablet?22:28,fontWeight:800,color:T.white,margin:0,letterSpacing:"0.04em"}}>{meta[effectiveView]?.title}</h1>
-        </div>
+        </div>}
         {effectiveView==="bookings"&&<BookingsView currentUser={curU} bookings={bookings} setBookings={handleSetBookings} users={users} T={T} darkMode={darkMode}/>}
         {effectiveView==="alias"   &&<AliasView currentUser={curU} aliasData={aliasData} setAliasData={handleSetAliasData} users={users} T={T} darkMode={darkMode}/>}
         {effectiveView==="payroll" &&<PayrollView currentUser={curU} bookings={bookings} payments={payments} setPayments={handleSetPayments} users={users} T={T}/>}
