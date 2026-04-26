@@ -78,6 +78,55 @@ export async function POST(req) {
   }
 }
 
+export async function PATCH(req) {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  try {
+    const b = await req.json();
+    if (!b.id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+    let tags = Array.isArray(b.tags) ? b.tags : [];
+    if (tags.includes('musiker') && tags.includes('vikar')) {
+      tags = tags.filter(t => t !== 'vikar');
+    }
+
+    const existing = await sql`SELECT * FROM users WHERE id = ${b.id}`;
+    const oldUser = existing[0];
+    if (!oldUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    const oldTags = JSON.parse(oldUser?.tags || '[]');
+
+    const user = await sql`
+      UPDATE users SET
+        first      = ${b.first},
+        last       = ${b.last},
+        initials   = ${b.initials},
+        instrument = ${b.instrument || ''},
+        email      = ${b.email || null},
+        phone      = ${b.phone || ''},
+        role       = ${b.role},
+        sub_type   = ${b.subType},
+        is_admin   = ${b.isAdmin},
+        tags       = ${JSON.stringify(tags)},
+        color      = ${b.color || ''},
+        password   = COALESCE(NULLIF(${b.password || ''}, ''), password)
+      WHERE id = ${b.id}
+      RETURNING *
+    `;
+
+    const savedMusId = user[0]?.musician_id;
+    if (savedMusId != null && JSON.stringify(oldTags) !== JSON.stringify(tags)) {
+      console.log('[users PATCH] syncEnrollment', savedMusId, oldTags, '→', tags);
+      await syncEnrollment(savedMusId, oldTags, tags).catch(e =>
+        console.error('[enrollment error]', e.message)
+      );
+    }
+
+    return NextResponse.json(user[0]);
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(req) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

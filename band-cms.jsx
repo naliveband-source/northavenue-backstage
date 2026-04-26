@@ -128,10 +128,10 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
   const dayNum=dateObj.getDate();
   const monthYear=dateObj.toLocaleDateString("da-DK",{month:"short",year:"numeric"}).toUpperCase();
 
-  const Fld=({label,value,span=1,color=T.white})=>(
+  const Fld=({label,value,span=1,color=T.muted,weight=400})=>(
     <div style={{gridColumn:`span ${span}`}}>
       <div style={{fontSize:12,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
-      <div style={{fontSize:14,color,fontWeight:700,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
+      <div style={{fontSize:14,color,fontWeight:weight,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
     </div>
   );
 
@@ -167,20 +167,20 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
 
   const profilePopup=chipProfile?createPortal(
     <div style={{position:"fixed",inset:0,background:"#000d",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setChipProfile(null)}>
-      <div style={{background:"#1E1C1D",border:`1px solid ${userColor(chipProfile)}33`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
-        <div style={{border:"1px solid #2E2B2C",borderRadius:12,padding:14,marginBottom:16}}>
+      <div style={{background:T.dim,border:`1px solid ${userColor(chipProfile)}33`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
+        <div style={{border:`1px solid ${T.border}`,borderRadius:12,padding:14,marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:44,height:44,background:userColor(chipProfile),borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{chipProfile.initials}</div>
             <div>
-              <div style={{fontSize:15,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{chipProfile.first} {chipProfile.last}</div>
-              <div style={{fontSize:10,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginTop:3}}>{chipProfile.instrument||"–"}</div>
+              <div style={{fontSize:15,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{chipProfile.first} {chipProfile.last}</div>
+              <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:3}}>{chipProfile.instrument||"–"}</div>
             </div>
           </div>
         </div>
-        {chipProfile.phone&&<div style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{chipProfile.phone}</span></div>}
-        <div style={{display:"flex",gap:10,marginBottom:6,alignItems:"flex-start"}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{chipProfile.email}</span></div>
-        {(chipProfile.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>{(chipProfile.tags||[]).map(t=><span key={t} style={{background:"#D4622A22",color:"#D4622A",padding:"2px 8px",borderRadius:4,fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.07em"}}>{TAG_LABELS[t]||t}</span>)}</div>}
-        <button onClick={()=>setChipProfile(null)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"none",color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.2em",fontWeight:600}}>LUK</button>
+        {chipProfile.phone&&<div style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}><span style={{fontSize:11,color:T.subText,minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:T.cardText,fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{chipProfile.phone}</span></div>}
+        <div style={{display:"flex",gap:10,marginBottom:6,alignItems:"flex-start"}}><span style={{fontSize:11,color:T.subText,minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:T.cardText,fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{chipProfile.email}</span></div>
+        {(chipProfile.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>{(chipProfile.tags||[]).map(t=><span key={t} style={{background:`color-mix(in oklab, ${T.orange} 16%, transparent)`,color:T.orange,padding:"2px 8px",borderRadius:4,fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.07em"}}>{TAG_LABELS[t]||t}</span>)}</div>}
+        <button onClick={()=>setChipProfile(null)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.2em",fontWeight:600}}>LUK</button>
       </div>
     </div>,
     document.body
@@ -217,8 +217,8 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
               <Fld label="SÆT" value={booking.sets}/>
             </div>
             <div style={{display:"grid",gridTemplateColumns:isAdmin?"1fr 1fr":"1fr",gap:"10px 14px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
-              {isAdmin&&<Fld label="MUSIKER LØN" value={`${fmt(mp)} kr.`} color={stubColor}/>}
-              <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
+              {isAdmin&&<Fld label="MUSIKER LØN" value={fmt(mp)} color={stubColor} weight={700}/>}
+              <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" weight={700}/>
             </div>
             {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
               <div style={{fontSize:10,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
@@ -255,8 +255,8 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
             <Fld label="ANKOMST" value={booking.arrival}/>
             <Fld label="SPILLETID" value={booking.playTime}/>
             <Fld label="SÆT" value={booking.sets}/>
-            {isAdmin&&<Fld label="MUSIKER LØN" value={`${fmt(mp)} kr.`} color={stubColor}/>}
-            <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" span={2}/>
+            {isAdmin&&<Fld label="MUSIKER LØN" value={fmt(mp)} color={stubColor} weight={700}/>}
+            <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" weight={700} span={2}/>
           </div>
           {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
           <MusicianChips/>
@@ -279,10 +279,10 @@ function AliasDetailPopup({booking,T,onClose}){
     ?<span><span style={{color:"#1E7B5B"}}>●</span>{" "}Ja</span>
     :<span><span style={{color:"#C04040"}}>●</span>{" "}Nej</span>;
 
-  const Fld=({label,value,span=1,color=T.white})=>(
+  const Fld=({label,value,span=1,color=T.muted,weight=400})=>(
     <div style={{gridColumn:`span ${span}`}}>
       <div style={{fontSize:12,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif"}}>{label}</div>
-      <div style={{fontSize:14,color,fontWeight:700,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
+      <div style={{fontSize:14,color,fontWeight:weight,fontFamily:"'Poppins',sans-serif",marginTop:2}}>{value||"–"}</div>
     </div>
   );
 
@@ -321,12 +321,12 @@ function AliasDetailPopup({booking,T,onClose}){
             <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px 16px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
               <Fld label="BEMANDING" value={booking.musicians?`${booking.musicians} musikere`:null}/>
               <Fld label="BIL + GEAR" value={carGearVal}/>
-              <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
+              <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" weight={700}/>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px 16px",borderBottom:`1px dashed ${T.border}`,paddingBottom:14,marginBottom:14}}>
               <Fld label="KONTAKTPERSON" value={booking.contact}/>
               <Fld label="TELEFON" value={booking.phone}/>
-              <Fld label="BOOKING (KR)" value={booking.bookingFee?`${fmt(booking.bookingFee)} kr.`:null} color={T.orange}/>
+              <Fld label="BOOKING (KR)" value={booking.bookingFee?fmt(booking.bookingFee):null} color={T.orange} weight={700}/>
             </div>
             {booking.notes&&<div style={{padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
               <div style={{fontSize:10,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
@@ -363,10 +363,10 @@ function AliasDetailPopup({booking,T,onClose}){
             <Fld label="SÆT" value={booking.sets}/>
             <Fld label="BEMANDING" value={booking.musicians?`${booking.musicians} musikere`:null}/>
             <Fld label="BIL + GEAR" value={carGearVal}/>
-            <Fld label="BOOKER" value={booking.booker} color="#8B3FA8"/>
+            <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" weight={700}/>
             <Fld label="KONTAKTPERSON" value={booking.contact}/>
             <Fld label="TELEFON" value={booking.phone}/>
-            <Fld label="BOOKING (KR)" value={booking.bookingFee?`${fmt(booking.bookingFee)} kr.`:null} color={T.orange}/>
+            <Fld label="BOOKING (KR)" value={booking.bookingFee?fmt(booking.bookingFee):null} color={T.orange} weight={700}/>
           </div>
           {booking.notes&&<div style={{padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
         </div>
@@ -408,19 +408,19 @@ function UserChip({user,active,T}){
     </span>
     {open&&typeof document!=="undefined"&&createPortal(
       <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setOpen(false)}>
-        <div style={{background:"#1E1C1D",border:`1px solid ${color}33`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
-          <div style={{border:"1px solid #2E2B2C",borderRadius:12,padding:14,marginBottom:16}}>
+        <div style={{background:T.dim,border:`1px solid ${color}33`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
+          <div style={{border:`1px solid ${T.border}`,borderRadius:12,padding:14,marginBottom:16}}>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:44,height:44,background:color,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{user.initials}</div>
               <div>
-                <div style={{fontSize:15,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{user.first} {user.last}</div>
-                <div style={{fontSize:10,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginTop:3}}>{user.instrument||"–"}</div>
+                <div style={{fontSize:15,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{user.first} {user.last}</div>
+                <div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",marginTop:3}}>{user.instrument||"–"}</div>
               </div>
             </div>
           </div>
-          {user.phone&&<div style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{user.phone}</span></div>}
-          <div style={{display:"flex",gap:10,alignItems:"flex-start"}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{user.email}</span></div>
-          <button onClick={()=>setOpen(false)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"none",color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.2em",fontWeight:600}}>LUK</button>
+          {user.phone&&<div style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}><span style={{fontSize:11,color:T.subText,minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:T.cardText,fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{user.phone}</span></div>}
+          <div style={{display:"flex",gap:10,alignItems:"flex-start"}}><span style={{fontSize:11,color:T.subText,minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:T.cardText,fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{user.email}</span></div>
+          <button onClick={()=>setOpen(false)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.2em",fontWeight:600}}>LUK</button>
         </div>
       </div>,
       document.body
@@ -824,20 +824,9 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
   const totalMPay=filtered.reduce((s,b)=>s+calcMusicianPay(b.bandPay),0);
   const myEarned=myJobs.reduce((s,b)=>{const inSub=b.substituteIds.includes(currentUser.musicianId)&&!b.memberIds.includes(currentUser.musicianId);return s+(inSub?calcSubPay(calcMusicianPay(b.bandPay)):calcMusicianPay(b.bandPay));},0);
 
-  const [toggleErr,setToggleErr]=useState(null);
-  const toggleMember=async(bid,mid)=>{
-    const snapshot=bookings;
-    setBookings(bs=>bs.map(b=>{
-      if(b.id!==bid)return b;
-      const has=b.memberIds.includes(mid);
-      return{...b,memberIds:has?b.memberIds.filter(x=>x!==mid):[...b.memberIds,mid]};
-    }));
-    const bk=snapshot.find(b=>b.id===bid);
-    const action=bk?.memberIds.includes(mid)?'remove':'add';
-    try{
-      const res=await fetch('/api/bookings/toggle-member',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({bookingId:bid,musicianId:mid,action})});
-      if(!res.ok){setBookings(snapshot);setToggleErr(bid);setTimeout(()=>setToggleErr(null),2000);}
-    }catch{setBookings(snapshot);setToggleErr(bid);setTimeout(()=>setToggleErr(null),2000);}
+  const [absent,setAbsent]=useState(new Set());
+  const toggleAbsent=(bid)=>{
+    setAbsent(prev=>{const n=new Set(prev);if(n.has(bid))n.delete(bid);else n.add(bid);return n;});
   };
 
   const oA=darkMode?"#D4622A":"#C4521F";
@@ -873,12 +862,13 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
         const pay=isSub?sp:mp;
         const iAmIn=b.memberIds.includes(currentUser.musicianId)||b.substituteIds.includes(currentUser.musicianId);
         const isMyJob=isAdmin||iAmIn;
+        const isAbsent=!isAdmin&&absent.has(b.id);
         const br=PAY_BRACKETS.find(x=>x.pay===pay)||PAY_BRACKETS.slice(-1)[0];
         const weekday=new Date(b.date).toLocaleDateString("da-DK",{weekday:"short"}).toUpperCase();
         const dateStr=new Date(b.date).toLocaleDateString("da-DK",{day:"2-digit",month:"short"});
         return(
           <div key={b.id} onClick={()=>setDetailBooking(b)}
-            style={{background:T.dim,borderRadius:12,overflow:"hidden",display:"flex",cursor:"pointer",opacity:past?0.65:isMyJob?1:0.3,position:"relative"}}>
+            style={{background:T.dim,borderRadius:12,overflow:"hidden",display:"flex",cursor:"pointer",opacity:past?0.65:isAbsent?0.45:isMyJob?1:0.3,position:"relative"}}>
             <div style={{width:5,background:past?oA:isMyJob?br.color:T.border,flexShrink:0}}/>
             <div style={{padding:isMobile?"12px 14px":"14px 20px",display:"flex",alignItems:"center",gap:isMobile?12:20,flex:1,minWidth:0}}>
               <div style={{textAlign:"center",flexShrink:0,minWidth:isMobile?40:52}}>
@@ -896,15 +886,16 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
               {!isMobile&&!isSub&&(
                 <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
                   {past&&<span style={{fontSize:8,color:oA,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:oA+"18",padding:"3px 8px",borderRadius:4,marginRight:4}}>AFHOLDT</span>}
+                  {!past&&isAbsent&&<span style={{fontSize:8,color:T.red,fontWeight:700,letterSpacing:"0.08em",fontFamily:"'Poppins',sans-serif",background:T.red+"18",padding:"3px 8px",borderRadius:4,marginRight:4}}>FRAVÆRENDE</span>}
                   {memberUsers.map(u=><UserChip key={u.id} user={u} active={b.memberIds.includes(u.musicianId)} T={T}/>)}
                 </div>
               )}
               <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5}}>
                 <div style={{fontSize:isMobile?14:16,fontWeight:800,color:isAdmin?T.orange:br.color,fontFamily:"'Poppins',sans-serif"}}>{isAdmin?fmt(b.bandPay):fmt(pay)}</div>
                 {!isAdmin&&!past&&b.memberIds.includes(currentUser.musicianId)&&(
-                  <button onClick={e=>{e.stopPropagation();toggleMember(b.id,currentUser.musicianId);}}
-                    style={{padding:"4px 10px",border:`1px solid ${toggleErr===b.id?T.red:iAmIn?T.red:T.green}`,background:iAmIn?T.red+"18":T.green+"22",color:toggleErr===b.id?T.red:iAmIn?T.red:T.green,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
-                    {toggleErr===b.id?"FEJL":iAmIn?"MELD FRAVÆRENDE":"MELD PÅ"}
+                  <button onClick={e=>{e.stopPropagation();toggleAbsent(b.id);}}
+                    style={{padding:"4px 10px",border:`1px solid ${isAbsent?T.green:T.red}`,background:isAbsent?T.green+"22":T.red+"18",color:isAbsent?T.green:T.red,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
+                    {isAbsent?"MELD PÅ":"MELD FRAVÆRENDE"}
                   </button>
                 )}
                 {isAdmin&&(
@@ -1218,20 +1209,23 @@ function SortableMusicianRow({u,T,size,onEdit,onDelete,onGenerateLink,onShowLink
   const {attributes,listeners,setNodeRef,transform,transition,isDragging}=useSortable({id:u.id});
   const ds={transform:CSS.Transform.toString(transform),transition,position:"relative",zIndex:isDragging?1:0};
   const c=userColor(u);
-  const av=sz=>(<div style={{width:sz,height:sz,background:c,borderRadius:sz===40?8:7,display:"grid",placeItems:"center",fontSize:sz===40?13:11,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>);
+  const av=sz=>(<div style={{width:sz,height:sz,background:c,borderRadius:sz===40?8:6,display:"grid",placeItems:"center",fontSize:sz===40?13:11,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials||"?"}</div>);
   const statusPills=(<>{u.status==="pending"&&<span style={pillStyle(T.muted)}>AFVENTER</span>}{u.status==="invited"&&<span style={pillStyle(BLUE_A)}>INVITERET</span>}</>);
   const tagPills=(u.tags||[]).map(t=>{const tc=t==="musiker"?T.green:t==="vikar"?AMBER:t==="alias_manager"?PURPLE:T.muted;const tl=t==="musiker"?"Musiker":t==="vikar"?"Vikar":t==="alias_manager"?"Alias ans.":t;return <span key={t} style={pillStyle(tc)}>{tl}</span>;});
   const infoCol=ns=>(<div style={{flex:1,minWidth:0}}>
-    <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
-      <span style={{fontFamily:"'Trirong',serif",fontSize:ns,fontWeight:600,letterSpacing:"-0.01em",color:T.white}}>{u.first} {u.last}</span>
-      {statusPills}
+    <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:size==="mobile"?"nowrap":"wrap",overflow:"hidden"}}>
+      <span style={{fontFamily:"'Trirong',serif",fontSize:size==="mobile"?14:ns,fontWeight:600,letterSpacing:"-0.01em",color:T.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{u.first} {u.last}</span>
+      {size!=="mobile"&&statusPills}
       {size==="tablet"&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tagPills}</div>}
     </div>
-    <div style={{marginTop:2,fontSize:11,fontFamily:"'Poppins',sans-serif"}}>
-      {u.instrument&&<span style={{color:T.muted}}>{u.instrument}</span>}
-      {u.instrument&&u.email&&<span style={{color:T.muted}}> · </span>}
-      {u.email?<span style={{color:T.muted}}>{u.email}</span>:<span style={{color:T.border,fontStyle:"italic"}}>(ingen email)</span>}
-    </div>
+    {size==="mobile"
+      ?<div style={{fontSize:9,fontFamily:"'Poppins',sans-serif",color:T.muted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:2}}>{u.instrument||""}</div>
+      :<div style={{marginTop:2,fontSize:11,fontFamily:"'Poppins',sans-serif"}}>
+        {u.instrument&&<span style={{color:T.muted}}>{u.instrument}</span>}
+        {u.instrument&&u.email&&<span style={{color:T.muted}}> · </span>}
+        {u.email?<span style={{color:T.muted}}>{u.email}</span>:<span style={{color:T.border,fontStyle:"italic"}}>(ingen email)</span>}
+      </div>
+    }
   </div>);
   const actions=(<div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
     {u.status==="pending"&&<button onClick={()=>onGenerateLink(u)} disabled={inviteLoading===u.id} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${T.orange}55`,borderRadius:8,color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.07em",opacity:inviteLoading===u.id?0.6:1}}>{inviteLoading===u.id?"...":"🔗 LINK"}</button>}
@@ -1239,7 +1233,7 @@ function SortableMusicianRow({u,T,size,onEdit,onDelete,onGenerateLink,onShowLink
     <button onClick={()=>onEdit(u)} style={{padding:"5px 14px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.cardText,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.07em",transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=T.orange;e.currentTarget.style.color=T.orange;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.cardText;}}>REDIGER</button>
     <Btn onClick={()=>onDelete(u)} color={T.red} small disabled={deleting}>FJERN</Btn>
   </div>);
-  const mobileMenu=(<div style={{position:"relative",flexShrink:0}}>
+  const mobileMenu=(<div style={{position:"relative",flexShrink:0,alignSelf:"center"}}>
     <button onClick={()=>setMenuOpen(v=>!v)} style={{padding:"8px 10px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.muted,cursor:"pointer",fontSize:14,minHeight:36,lineHeight:1}}>⋯</button>
     {menuOpen&&<div style={{position:"absolute",right:0,top:"calc(100% + 4px)",background:T.dim,border:`1px solid ${T.border}`,borderRadius:10,padding:"6px 4px",zIndex:10,minWidth:140,display:"flex",flexDirection:"column",gap:2}}>
       {u.status==="pending"&&<button onClick={()=>{onGenerateLink(u);setMenuOpen(false);}} disabled={inviteLoading===u.id} style={{padding:"10px 14px",background:"transparent",border:"none",color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,textAlign:"left",borderRadius:8,opacity:inviteLoading===u.id?0.6:1}}>🔗 Generer link</button>}
@@ -1250,12 +1244,12 @@ function SortableMusicianRow({u,T,size,onEdit,onDelete,onGenerateLink,onShowLink
   </div>);
   if(size==="mobile"){return(
     <div ref={setNodeRef} style={{...ds,opacity:isDragging?0.8:1}}>
-      <div style={{padding:"14px 4px",borderBottom:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:10}}>
-        <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-          <div {...attributes} {...listeners} style={{marginTop:8,color:T.muted,cursor:isDragging?"grabbing":"grab",fontSize:13,padding:"2px 4px",flexShrink:0,touchAction:"none",lineHeight:1,userSelect:"none"}}>⋮⋮</div>
-          {av(36)}{infoCol(18)}{mobileMenu}
+      <div style={{padding:"14px 4px",borderBottom:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:6}}>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <div {...attributes} {...listeners} style={{width:16,textAlign:"center",color:T.muted,cursor:isDragging?"grabbing":"grab",fontSize:13,flexShrink:0,touchAction:"none",lineHeight:1,userSelect:"none",alignSelf:"center"}}>⋮⋮</div>
+          {av(34)}{infoCol(14)}{mobileMenu}
         </div>
-        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{statusPills}{tagPills}</div>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap",paddingLeft:27}}>{statusPills}{tagPills}</div>
       </div>
     </div>
   );}
@@ -1298,15 +1292,14 @@ function UserRow({u,T,size,onEdit,onDelete,onGenerateLink,onShowLink,inviteLoadi
     <Btn onClick={()=>onDelete(u)} color={T.red} small disabled={deleting}>FJERN</Btn>
   </div>);
   if(size==="mobile"){return(
-    <div style={{padding:"14px 4px",borderBottom:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:10}}>
-      <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-        {av(36)}
+    <div style={{padding:"14px 4px",borderBottom:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:6}}>
+      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        {av(34)}
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontFamily:"'Trirong',serif",fontSize:18,fontWeight:600,letterSpacing:"-0.01em",lineHeight:1.2,color:T.white}}>{u.first} {u.last}</div>
-          {u.instrument&&<div style={{fontSize:11,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{u.instrument}</div>}
-          {u.email&&<div style={{fontSize:10,color:T.muted,fontFamily:"'Poppins',sans-serif",wordBreak:"break-all"}}>{u.email}</div>}
+          <div style={{fontFamily:"'Trirong',serif",fontSize:14,fontWeight:600,letterSpacing:"-0.01em",color:T.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{u.first} {u.last}</div>
+          {u.instrument&&<div style={{fontSize:9,color:T.muted,fontFamily:"'Poppins',sans-serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{u.instrument}</div>}
         </div>
-        <div style={{position:"relative",flexShrink:0}}>
+        <div style={{position:"relative",flexShrink:0,alignSelf:"center"}}>
           <button onClick={()=>setMenuOpen(v=>!v)} style={{padding:"8px 10px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,color:T.muted,cursor:"pointer",fontSize:14,minHeight:36,lineHeight:1}}>⋯</button>
           {menuOpen&&<div style={{position:"absolute",right:0,top:"calc(100% + 4px)",background:T.dim,border:`1px solid ${T.border}`,borderRadius:10,padding:"6px 4px",zIndex:10,minWidth:140,display:"flex",flexDirection:"column",gap:2}}>
             {u.status==="pending"&&<button onClick={()=>{onGenerateLink(u);setMenuOpen(false);}} disabled={inviteLoading===u.id} style={{padding:"10px 14px",background:"transparent",border:"none",color:T.orange,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,fontWeight:700,textAlign:"left",borderRadius:8,opacity:inviteLoading===u.id?0.6:1}}>🔗 Generer link</button>}
@@ -1316,7 +1309,7 @@ function UserRow({u,T,size,onEdit,onDelete,onGenerateLink,onShowLink,inviteLoadi
           </div>}
         </div>
       </div>
-      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{statusPills}{tagPills}</div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",paddingLeft:0}}>{statusPills}{tagPills}</div>
     </div>
   );}
   const gridCols=size==="desktop"?"40px 1fr auto auto":"40px 1fr auto";
@@ -1366,20 +1359,37 @@ function AdminView({users,setUsers,T,onReorder,onUserSaved}){
     try{
       const subType=deriveSubType(form.isAdmin,form.tags);
       const role=form.isAdmin?"admin":"musician";
-      const id=editing==="new"?`u${Date.now()}`:editing.id;
-      const res=await fetch("/api/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-        id,first:form.first,last:form.last,initials:form.initials,
-        instrument:form.instrument||"",email:form.email,
-        phone:form.phone||"",color:form.color||"",
-        role,subType,isAdmin:form.isAdmin,tags:form.tags,
-        musicianId:editing==="new"?null:(editing.musicianId??null),
-        theme:editing==="new"?"dark":(editing.theme||"dark"),
-        status:editing==="new"?"pending":(editing.status||"active"),
-        ...(form.password?{password:form.password}:{}),
-      })});
-      if(!res.ok){const d=await res.json();alert("Fejl: "+(d.error||res.status));return;}
-      await onUserSaved?.();
-      setEditing(null);
+      if(editing==="new"){
+        const id=`u${Date.now()}`;
+        const res=await fetch("/api/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+          id,first:form.first,last:form.last,initials:form.initials,
+          instrument:form.instrument||"",email:form.email,
+          phone:form.phone||"",color:form.color||"",
+          role,subType,isAdmin:form.isAdmin,tags:form.tags,
+          musicianId:null,theme:"dark",status:"pending",
+          ...(form.password?{password:form.password}:{}),
+        })});
+        if(!res.ok){const d=await res.json();alert("Fejl: "+(d.error||res.status));return;}
+        await onUserSaved?.();
+        setEditing(null);
+      } else {
+        const userId=editing.id;
+        console.log('[admin-edit] saving:',userId);
+        const updated={
+          ...editing,
+          first:form.first,last:form.last,initials:form.initials,
+          instrument:form.instrument||"",email:form.email,
+          phone:form.phone||"",color:form.color||"",
+          role,subType,isAdmin:form.isAdmin,tags:form.tags,
+          ...(form.password?{password:form.password}:{}),
+        };
+        const res=await fetch("/api/users",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(updated)});
+        if(!res.ok){const d=await res.json();alert("Fejl: "+(d.error||res.status));return;}
+        const result=await res.json();
+        console.log('[admin-edit] saved:',result);
+        setUsers(prev=>prev.map(u=>u.id===updated.id?updated:u));
+        setEditing(null);
+      }
     }catch(e){alert("Netværksfejl: "+e.message);}
     finally{setSaving(false);}
   };
