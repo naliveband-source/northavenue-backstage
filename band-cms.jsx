@@ -142,8 +142,8 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:booking.substituteIds?.length>0?10:0}}>
       {memberUsers.map(u=>{
         const isIn=booking.memberIds.includes(u.musicianId);const c=userColor(u);
-        return(<div key={u.id} onClick={e=>openChip(e,u)} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:isIn?c+"18":T.dim,border:`1px solid ${isIn?c+"44":T.border}`,borderRadius:20,opacity:isIn?1:0.45,cursor:"pointer"}}>
-          <span style={{width:16,height:16,background:c+"22",border:`1px solid ${c}`,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
+        return(<div key={u.id} onClick={e=>openChip(e,u)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:isIn?c+"18":T.dim,border:`1px solid ${isIn?c+"44":T.border}`,borderRadius:8,opacity:isIn?1:0.45,cursor:"pointer"}}>
+          <span style={{width:18,height:18,background:isIn?c:c+"44",borderRadius:4,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials}</span>
           <span style={{fontSize:11,color:isIn?T.white:T.subText,fontFamily:"'Poppins',sans-serif",fontWeight:isIn?600:400}}>{u.first}</span>
         </div>);
       })}
@@ -153,8 +153,8 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
         {booking.substituteIds.map(mid=>{
           const u=users.find(x=>x.musicianId===mid);if(!u)return null;const c=userColor(u);
-          return(<div key={mid} onClick={e=>openChip(e,u)} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:c+"18",border:`1px solid ${c+"44"}`,borderRadius:20,cursor:"pointer"}}>
-            <span style={{width:16,height:16,background:c+"22",border:`1px solid ${c}`,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:c,fontFamily:"'Poppins',sans-serif"}}>{u.initials}</span>
+          return(<div key={mid} onClick={e=>openChip(e,u)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:c+"18",border:`1px solid ${c+"44"}`,borderRadius:8,cursor:"pointer"}}>
+            <span style={{width:18,height:18,background:c,borderRadius:4,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{u.initials}</span>
             <span style={{fontSize:11,color:T.white,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>{u.first}</span>
             <span style={{fontSize:8,color:T.orange,background:T.orange+"18",padding:"1px 5px",borderRadius:3,fontFamily:"'Poppins',sans-serif",fontWeight:700}}>VIKAR</span>
           </div>);
@@ -167,18 +167,20 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
 
   const profilePopup=chipProfile?createPortal(
     <div style={{position:"fixed",inset:0,background:"#000d",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setChipProfile(null)}>
-      <div style={{background:"#1E1C1D",border:`1px solid ${userColor(chipProfile)}55`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
-        <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:18}}>
-          <div style={{width:52,height:52,background:userColor(chipProfile)+"22",border:`2px solid ${userColor(chipProfile)}`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:userColor(chipProfile),fontFamily:"'Poppins',sans-serif"}}>{chipProfile.initials}</div>
-          <div>
-            <div style={{fontSize:17,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{chipProfile.first} {chipProfile.last}</div>
-            <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginTop:3}}>{chipProfile.instrument||"–"}</div>
+      <div style={{background:"#1E1C1D",border:`1px solid ${userColor(chipProfile)}33`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
+        <div style={{border:"1px solid #2E2B2C",borderRadius:12,padding:14,marginBottom:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:44,height:44,background:userColor(chipProfile),borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{chipProfile.initials}</div>
+            <div>
+              <div style={{fontSize:15,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{chipProfile.first} {chipProfile.last}</div>
+              <div style={{fontSize:10,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginTop:3}}>{chipProfile.instrument||"–"}</div>
+            </div>
           </div>
         </div>
-        {chipProfile.phone&&<div style={{display:"flex",gap:10,marginBottom:6}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{chipProfile.phone}</span></div>}
+        {chipProfile.phone&&<div style={{display:"flex",gap:10,marginBottom:8}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{chipProfile.phone}</span></div>}
         <div style={{display:"flex",gap:10,marginBottom:6}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{chipProfile.email}</span></div>
         {(chipProfile.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>{(chipProfile.tags||[]).map(t=><span key={t} style={{background:"#D4622A22",color:"#D4622A",padding:"2px 8px",borderRadius:4,fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.07em"}}>{TAG_LABELS[t]||t}</span>)}</div>}
-        <button onClick={()=>setChipProfile(null)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"1px solid #2E2B2C",borderRadius:8,color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.08em"}}>LUK</button>
+        <button onClick={()=>setChipProfile(null)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"none",color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.2em",fontWeight:600}}>LUK</button>
       </div>
     </div>,
     document.body
@@ -399,24 +401,26 @@ function UserChip({user,active,T}){
   return(<>
     <span onClick={e=>{e.stopPropagation();setOpen(true);}} title={`${user.first} ${user.last}`}
       style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:6,
-        background:active?color+"33":"#2A262833",border:`1px solid ${active?color+"55":color+"22"}`,color:active?color:color+"77",
+        background:active?color:"#2A262833",border:`1px solid ${active?color+"55":color+"22"}`,color:active?"#F8F5E6":color+"77",
         fontSize:10,fontWeight:700,fontFamily:"'Poppins',sans-serif",cursor:"pointer",flexShrink:0,userSelect:"none",
         filter:active?"none":"blur(1.5px) grayscale(40%)",opacity:active?1:0.5,transition:"all .2s"}}>
       {user.initials}
     </span>
     {open&&typeof document!=="undefined"&&createPortal(
       <div style={{position:"fixed",inset:0,background:"#000d",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setOpen(false)}>
-        <div style={{background:"#1E1C1D",border:`1px solid ${color}55`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
-          <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:18}}>
-            <div style={{width:52,height:52,background:color+"22",border:`2px solid ${color}`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color,fontFamily:"'Poppins',sans-serif"}}>{user.initials}</div>
-            <div>
-              <div style={{fontSize:17,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{user.first} {user.last}</div>
-              <div style={{fontSize:11,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginTop:3}}>{user.instrument||"–"}</div>
+        <div style={{background:"#1E1C1D",border:`1px solid ${color}33`,borderRadius:16,padding:28,minWidth:260,maxWidth:340}} onClick={e=>e.stopPropagation()}>
+          <div style={{border:"1px solid #2E2B2C",borderRadius:12,padding:14,marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:44,height:44,background:color,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{user.initials}</div>
+              <div>
+                <div style={{fontSize:15,fontWeight:800,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif"}}>{user.first} {user.last}</div>
+                <div style={{fontSize:10,color:"#B0A8A4",fontFamily:"'Poppins',sans-serif",marginTop:3}}>{user.instrument||"–"}</div>
+              </div>
             </div>
           </div>
-          {user.phone&&<div style={{display:"flex",gap:10,marginBottom:6}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{user.phone}</span></div>}
+          {user.phone&&<div style={{display:"flex",gap:10,marginBottom:8}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{user.phone}</span></div>}
           <div style={{display:"flex",gap:10}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{user.email}</span></div>
-          <button onClick={()=>setOpen(false)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"1px solid #2E2B2C",borderRadius:8,color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.08em"}}>LUK</button>
+          <button onClick={()=>setOpen(false)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"none",color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.2em",fontWeight:600}}>LUK</button>
         </div>
       </div>,
       document.body
