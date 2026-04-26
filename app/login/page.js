@@ -133,7 +133,7 @@ function LoginPage() {
           justifyContent: "space-between", alignItems: "flex-start",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <Image src="/brand/NA_symbol.png" alt="" width={44} height={44} priority
+            <Image src="/brand/NA_symbol_transparent.png" alt="" width={44} height={44} priority
               style={{ display: "block", flexShrink: 0 }} />
             <div>
               <div style={{
