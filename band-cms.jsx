@@ -177,8 +177,8 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
             </div>
           </div>
         </div>
-        {chipProfile.phone&&<div style={{display:"flex",gap:10,marginBottom:8}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{chipProfile.phone}</span></div>}
-        <div style={{display:"flex",gap:10,marginBottom:6}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{chipProfile.email}</span></div>
+        {chipProfile.phone&&<div style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{chipProfile.phone}</span></div>}
+        <div style={{display:"flex",gap:10,marginBottom:6,alignItems:"flex-start"}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{chipProfile.email}</span></div>
         {(chipProfile.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>{(chipProfile.tags||[]).map(t=><span key={t} style={{background:"#D4622A22",color:"#D4622A",padding:"2px 8px",borderRadius:4,fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.07em"}}>{TAG_LABELS[t]||t}</span>)}</div>}
         <button onClick={()=>setChipProfile(null)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"none",color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.2em",fontWeight:600}}>LUK</button>
       </div>
@@ -418,8 +418,8 @@ function UserChip({user,active,T}){
               </div>
             </div>
           </div>
-          {user.phone&&<div style={{display:"flex",gap:10,marginBottom:8}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{user.phone}</span></div>}
-          <div style={{display:"flex",gap:10}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{user.email}</span></div>
+          {user.phone&&<div style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Telefon</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{user.phone}</span></div>}
+          <div style={{display:"flex",gap:10,alignItems:"flex-start"}}><span style={{fontSize:11,color:"#7A7470",minWidth:60,flexShrink:0,fontFamily:"'Poppins',sans-serif"}}>Email</span><span style={{fontSize:13,color:"#E8E0DC",fontWeight:600,fontFamily:"'Poppins',sans-serif",flex:1,minWidth:0,wordBreak:"break-all"}}>{user.email}</span></div>
           <button onClick={()=>setOpen(false)} style={{marginTop:20,width:"100%",padding:"8px",background:"transparent",border:"none",color:"#6B6468",cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,letterSpacing:"0.2em",fontWeight:600}}>LUK</button>
         </div>
       </div>,
