@@ -1061,7 +1061,6 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T,darkMode
   const memberUsers=sortMusicians(users.filter(u=>u.subType==='member'&&u.musicianId));
   const ownerUsers=sortMusicians(users.filter(u=>u.subType==='owner'&&u.musicianId));
   const vikarUsers=sortMusicians(users.filter(u=>hasVikar(u)&&u.musicianId));
-  const vikarCount=vikarUsers.length;
 
   const allMembers=tab==='vikarer'?vikarUsers:tab==='ejere'?ownerUsers:memberUsers;
   const members=role==='musician'?users.filter(u=>u.id===currentUser.id&&u.musicianId):allMembers;
@@ -1099,7 +1098,7 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T,darkMode
   },[jobs]);
 
   const monthName=['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
-  const groupTabs=[{id:'na',l:'NORTH AVENUE'},{id:'ejere',l:'EJERE'},{id:'vikarer',l:`VIKARER · ${vikarCount}`}];
+  const groupTabs=[{id:'na',l:'NORTH AVENUE'},{id:'ejere',l:'EJERE'},{id:'vikarer',l:'VIKARER'}];
 
   const addPayment=()=>{
     if(!addAmt||!addNote2||!addTarget)return;
