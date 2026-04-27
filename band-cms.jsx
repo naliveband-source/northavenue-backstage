@@ -1036,122 +1036,394 @@ function AliasView({currentUser,aliasData,setAliasData,users,T,darkMode}){
 }
 
 // ── PAYROLL ────────────────────────────────────────────────────────────────
-function PayrollView({currentUser,bookings,payments,setPayments,users,T}){
-  const isAdmin=currentUser.role==="admin";
-  const isSub=hasVikar(currentUser)&&!isAdmin;
-  const [yr,setYr]=useState(CUR_YEAR);
-  const [group,setGroup]=useState(isSub?"substitutes":isAdmin?"members":"members");
-  const [selIds,setSelIds]=useState(null);
+function PayrollView({currentUser,bookings,payments,setPayments,users,T,darkMode}){
+  const sans="'Poppins',sans-serif";
+  const serif="'Trirong',serif";
+  const isDark=!!darkMode;
+  const paper=isDark?'#1F1D1F':'#FBF8EE';
+  const role=currentUser.role==='admin'?'admin':'musician';
+
+  const winW=useWindowWidth();
+  const isMobile=winW<640;
+  const isTablet=winW>=640&&winW<1024;
+
+  const [year,setYear]=useState(CUR_YEAR);
+  const [tab,setTab]=useState('na');
+  const [activeId,setActiveId]=useState(null);
+  const [mobileTab,setMobileTab]=useState('jobs');
   const [showAdd,setShowAdd]=useState(false);
   const [addTarget,setAddTarget]=useState(null);
-  const [na,setNa]=useState("");const [nn,setNn]=useState("");const [nd,setNd]=useState("");
+  const [addAmt,setAddAmt]=useState('');
+  const [addNote2,setAddNote2]=useState('');
+  const [addDate,setAddDate]=useState('');
   const [confirmRemove,setConfirmRemove]=useState(null);
-  const winW=useWindowWidth();
-  const isMobile=winW<768;
-  const [payTab,setPayTab]=useState("jobs");
 
-  const memberUsers=sortMusicians(users.filter(u=>u.subType==="member"&&u.musicianId));
-  const ownerUsers =sortMusicians(users.filter(u=>u.subType==="owner"&&u.musicianId));
-  const subUsers   =sortMusicians(users.filter(u=>(u.subType==="substitute"||u.tags?.includes("vikar"))&&u.musicianId));
+  const memberUsers=sortMusicians(users.filter(u=>u.subType==='member'&&u.musicianId));
+  const ownerUsers=sortMusicians(users.filter(u=>u.subType==='owner'&&u.musicianId));
+  const vikarUsers=sortMusicians(users.filter(u=>hasVikar(u)&&u.musicianId));
+  const vikarCount=vikarUsers.length;
 
-  const groupUsers=isSub?subUsers.filter(u=>u.id===currentUser.id):!isAdmin?memberUsers.filter(u=>u.id===currentUser.id):group==="members"?memberUsers:group==="owners"?ownerUsers:subUsers;
-  const displayUsers=isAdmin&&selIds?groupUsers.filter(u=>selIds.includes(u.id)):groupUsers;
-  const jobsForYear=bookings.filter(b=>isPast(b.date)&&getYear(b.date)===yr);
+  const allMembers=tab==='vikarer'?vikarUsers:tab==='ejere'?ownerUsers:memberUsers;
+  const members=role==='musician'?users.filter(u=>u.id===currentUser.id&&u.musicianId):allMembers;
+
+  useEffect(()=>{setActiveId(null);},[tab]);
+
+  const resolvedActiveId=(activeId&&members.find(u=>u.id===activeId))?activeId:members[0]?.id??null;
+  const activeUser=members.find(u=>u.id===resolvedActiveId)||members[0]||null;
+
+  const fmtN=n=>new Intl.NumberFormat('da-DK').format(n);
+
+  const jobsForYear=useMemo(()=>bookings.filter(b=>isPast(b.date)&&getYear(b.date)===year),[bookings,year]);
+
+  const computeStats=mu=>{
+    if(!mu?.musicianId)return{jobs:[],earned:0,paid:0,balance:0,posts:[]};
+    const j=jobsForYear.filter(b=>b.memberIds.includes(mu.musicianId)||b.substituteIds?.includes(mu.musicianId));
+    const isO=mu.subType==='owner';
+    const e=isO?j.length*OWNER_PAY:j.reduce((s,b)=>{
+      const inSub=b.substituteIds?.includes(mu.musicianId)&&!b.memberIds.includes(mu.musicianId);
+      return s+(inSub?calcSubPay(calcMusicianPay(b.bandPay)):calcMusicianPay(b.bandPay));
+    },0);
+    const pts=(payments[mu.musicianId]||[]).filter(p=>getYear(p.date)===year).sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const pd=pts.reduce((s,p)=>s+p.amount,0);
+    return{jobs:j,earned:e,paid:pd,balance:e+pd,posts:pts};
+  };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const activeStats=useMemo(()=>computeStats(activeUser),[activeUser?.id,jobsForYear,payments,year]);
+  const {jobs,earned,paid,balance,posts}=activeStats;
+
+  const monthsByJobs=useMemo(()=>{
+    const g={};
+    jobs.forEach(j=>{const k=new Date(j.date).getMonth();(g[k]=g[k]||[]).push(j);});
+    return g;
+  },[jobs]);
+
+  const monthName=['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
+  const groupTabs=[{id:'na',l:'NORTH AVENUE'},{id:'ejere',l:'EJERE'},{id:'vikarer',l:`VIKARER · ${vikarCount}`}];
 
   const addPayment=()=>{
-    if(!na||!nn||!addTarget)return;
-    const e2={id:`p${Date.now()}`,date:nd||new Date().toISOString().slice(0,10),amount:parseFloat(na),note:nn};
-    setPayments(prev=>({...prev,[addTarget]:[...(prev[addTarget]||[]),e2]}));
-    setNa("");setNn("");setNd("");setShowAdd(false);setAddTarget(null);
+    if(!addAmt||!addNote2||!addTarget)return;
+    const p={id:`p${Date.now()}`,date:addDate||new Date().toISOString().slice(0,10),amount:parseFloat(addAmt),note:addNote2};
+    setPayments(prev=>({...prev,[addTarget]:[...(prev[addTarget]||[]),p]}));
+    setAddAmt('');setAddNote2('');setAddDate('');setShowAdd(false);setAddTarget(null);
   };
-  const removePay=async(mid,pid)=>{await fetch(`/api/payments?id=${pid}`,{method:"DELETE"}).catch(()=>{});setPayments(prev=>({...prev,[mid]:(prev[mid]||[]).filter(p=>p.id!==pid)}));setConfirmRemove(null);};
-  const tabSt=active=>({padding:"10px 20px",background:active?T.orange:"transparent",border:`1px solid ${active?T.orange:T.border}`,borderRadius:10,color:active?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:11,letterSpacing:"0.08em",fontWeight:active?700:400,transition:"all .15s"});
+  const removePay=async(mid,pid)=>{
+    await fetch(`/api/payments?id=${pid}`,{method:'DELETE'}).catch(()=>{});
+    setPayments(prev=>({...prev,[mid]:(prev[mid]||[]).filter(p=>p.id!==pid)}));
+    setConfirmRemove(null);
+  };
 
-  return(<div>
-    <YearTabs value={yr} onChange={setYr} T={T} years={YEAR_OPTS}/>
-    {isAdmin&&(<div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-      {[{id:"members",l:"NORTH AVENUE"},{id:"owners",l:"EJERE"},{id:"substitutes",l:"VIKARER"}].map(g=>(<button key={g.id} onClick={()=>{setGroup(g.id);setSelIds(null);}} style={tabSt(group===g.id)}>{g.l}</button>))}
-    </div>)}
-    {isAdmin&&groupUsers.length>1&&(<div style={{display:"flex",gap:6,marginBottom:20,flexWrap:"wrap"}}>
-      {groupUsers.map(u=>{const c=userColor(u);const active=!selIds||selIds.includes(u.id);
-        return(<button key={u.id} onClick={()=>{
-          if(!selIds){setSelIds([u.id]);return;}
-          const next=selIds.includes(u.id)?selIds.filter(x=>x!==u.id):[...selIds,u.id];
-          setSelIds(next.length===0||next.length===groupUsers.length?null:next);
-        }} style={{padding:"7px 16px",border:`1px solid ${active?c:T.border}`,borderRadius:20,background:active?c+"22":"transparent",color:active?c:T.muted,cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"'Poppins',sans-serif",transition:"all .15s"}}>{u.first}</button>);
-      })}
-    </div>)}
+  if(!activeUser)return(
+    <div style={{fontFamily:sans,color:T.muted,padding:'32px 0',fontStyle:'italic',fontSize:14}}>Ingen musikere i denne gruppe.</div>
+  );
 
-    {displayUsers.map(u=>{
-      const isOwner=u.subType==="owner";const isSubU=hasVikar(u)&&!u.isAdmin;
-      const jobs=jobsForYear.filter(b=>b.memberIds.includes(u.musicianId)||b.substituteIds?.includes(u.musicianId));
-      const earned=isOwner?jobs.length*OWNER_PAY:jobs.reduce((s,b)=>{const inSub=b.substituteIds?.includes(u.musicianId)&&!b.memberIds.includes(u.musicianId);return s+(inSub?calcSubPay(calcMusicianPay(b.bandPay)):calcMusicianPay(b.bandPay));},0);
-      const myPay=(payments[u.musicianId]||[]).filter(p=>getYear(p.date)===yr).sort((a,b)=>new Date(a.date)-new Date(b.date));
-      const paid=myPay.reduce((s,p)=>s+p.amount,0);
-      const balance=earned+paid;const color=userColor(u);
-      return(<div key={u.id} style={{marginBottom:24}}>
-        <div style={{background:T.dim,borderRadius:12,overflow:"hidden",display:"flex",marginBottom:12}}>
-          <div style={{width:5,background:color,flexShrink:0}}/>
-          <div style={{padding:"18px 22px",display:"flex",gap:24,flexWrap:"wrap",alignItems:"center",flex:1}}>
-            <div>
-              <div style={{fontSize:9,color:T.muted,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",marginBottom:4}}>MUSIKER</div>
-              <div style={{fontSize:22,fontWeight:800,color:T.white,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em",lineHeight:1.1}}>{u.first} {u.last}</div>
-              <div style={{fontSize:11,color:T.subText,marginTop:4,fontFamily:"'Poppins',sans-serif"}}>{u.instrument} · {jobs.length} jobs{isOwner?` · ${fmt(OWNER_PAY)}/job`:""}</div>
+  const color=userColor(activeUser);
+  const heroSize=isMobile?72:isTablet?96:140;
+  const cols=members.length>4?4:Math.max(1,members.length);
+
+  return(
+    <div style={{background:T.black,color:T.white,fontFamily:sans,paddingBottom:50,minHeight:'calc(100vh - 120px)'}}>
+
+      {/* Year pills — identical to YearTabs used in BookingsView */}
+      <YearTabs value={year} onChange={setYear} T={T} years={YEAR_OPTS}/>
+
+      {/* Group pills (admin only) */}
+      {role==='admin'&&(
+        <div style={{display:'flex',gap:isMobile?6:8,marginBottom:20,flexWrap:'wrap'}}>
+          {groupTabs.map(g=>{
+            const on=g.id===tab;
+            return(
+              <button key={g.id} onClick={()=>setTab(g.id)} style={{
+                padding:'9px 18px',fontSize:11,
+                letterSpacing:'0.08em',fontWeight:700,
+                background:on?T.orange:T.dim,
+                color:on?'#F8F5E6':T.muted,
+                border:`1px solid ${on?T.orange:T.border}`,
+                borderRadius:10,cursor:'pointer',fontFamily:sans,transition:'all .15s',
+              }}>{g.l}</button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Member runlist — tablet/desktop grid */}
+      {role==='admin'&&!isMobile&&(
+        <div style={{
+          display:'grid',gridTemplateColumns:`repeat(${cols},1fr)`,
+          marginBottom:30,
+          border:`1px solid ${T.border}`,
+        }}>
+          {members.map((mu,i)=>{
+            const isAct=mu.id===resolvedActiveId;
+            const st=computeStats(mu);
+            return(
+              <button key={mu.id} onClick={()=>setActiveId(mu.id)} style={{
+                padding:isTablet?'10px 12px':'14px 16px',
+                textAlign:'left',background:'transparent',border:'none',
+                borderLeft:i%cols!==0?`1px solid ${T.border}`:'none',
+                borderTop:i>=cols?`1px solid ${T.border}`:'none',
+                boxShadow:isAct?`inset 0 -3px 0 ${userColor(mu)}`:'none',
+                cursor:'pointer',fontFamily:sans,
+              }}>
+                <div style={{display:'flex',alignItems:'center',gap:isTablet?8:10}}>
+                  <div style={{width:isTablet?7:8,height:isTablet?7:8,background:userColor(mu),borderRadius:'50%'}}/>
+                  <div style={{fontSize:9,letterSpacing:'0.14em',color:T.muted}}>
+                    {String(i+1).padStart(2,'0')} · {(mu.instrument||'MUSIKER').toUpperCase()}
+                  </div>
+                </div>
+                <div style={{fontFamily:serif,fontSize:isTablet?15:18,fontWeight:600,marginTop:isTablet?3:4,letterSpacing:'-0.01em',color:isAct?T.white:T.muted}}>
+                  {mu.first} {mu.last}
+                </div>
+                <div style={{fontSize:isTablet?10:11,color:T.muted,marginTop:2}}>
+                  {st.jobs.length} {st.jobs.length===1?'job':'jobs'} · {fmtN(st.balance)} kr.
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Member runlist — mobile horizontal scroll */}
+      {role==='admin'&&isMobile&&(
+        <div style={{display:'flex',gap:8,overflowX:'auto',marginBottom:18,paddingBottom:6}}>
+          {members.map(mu=>{
+            const on=mu.id===resolvedActiveId;
+            const st=computeStats(mu);
+            return(
+              <button key={mu.id} onClick={()=>setActiveId(mu.id)} style={{
+                flexShrink:0,padding:'10px 14px',textAlign:'left',
+                background:on?T.dim:'transparent',
+                border:`1px solid ${on?userColor(mu):T.border}`,
+                borderRadius:12,cursor:'pointer',fontFamily:sans,minWidth:130,color:T.white,
+              }}>
+                <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+                  <div style={{width:7,height:7,background:userColor(mu),borderRadius:'50%'}}/>
+                  <div style={{fontSize:9,letterSpacing:'0.12em',color:T.muted}}>{(mu.instrument||'MUSIKER').toUpperCase()}</div>
+                </div>
+                <div style={{fontFamily:serif,fontSize:14,fontWeight:600,letterSpacing:'-0.01em',color:on?T.white:T.muted}}>{mu.first} {mu.last}</div>
+                <div style={{fontSize:10,color:T.muted,marginTop:2}}>{st.jobs.length} {st.jobs.length===1?'job':'jobs'} · {fmtN(st.balance)}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Musician role banner */}
+      {role==='musician'&&(
+        <div style={{
+          display:'flex',alignItems:'center',gap:isMobile?12:14,
+          padding:isMobile?'12px 14px':'14px 18px',marginBottom:isMobile?24:30,
+          borderTop:`1px solid ${T.border}`,borderBottom:`1px solid ${T.border}`,
+        }}>
+          <div style={{width:isMobile?7:8,height:isMobile?7:8,background:color,borderRadius:'50%'}}/>
+          <div style={{fontSize:9,letterSpacing:'0.14em',color:T.muted}}>
+            DIN OVERSIGT · {(activeUser.instrument||'MUSIKER').toUpperCase()}
+          </div>
+          <div style={{marginLeft:'auto',fontFamily:serif,fontSize:isMobile?14:18,fontWeight:600,letterSpacing:'-0.01em'}}>
+            {activeUser.first} {activeUser.last}
+          </div>
+        </div>
+      )}
+
+      {/* HERO */}
+      <div style={{
+        display:isMobile?'flex':'grid',
+        flexDirection:isMobile?'column':undefined,
+        gridTemplateColumns:isMobile?undefined:'1.4fr 1fr',
+        gap:16,marginBottom:isMobile?26:48,paddingBottom:isMobile?22:36,
+        borderBottom:`1px solid ${T.border}`,
+      }}>
+        <div>
+          <div style={{fontFamily:serif,fontStyle:'italic',fontSize:isMobile?13:14,color:T.muted,marginBottom:6}}>
+            Til gode i {year} —
+          </div>
+          <div style={{fontFamily:serif,fontSize:heroSize,fontWeight:600,lineHeight:0.9,letterSpacing:'-0.04em',color}}>
+            {fmtN(balance)}
+          </div>
+          <div style={{fontFamily:serif,fontStyle:'italic',fontSize:isMobile?14:18,color:T.muted,marginTop:isMobile?4:6}}>
+            danske kroner
+          </div>
+          <div style={{marginTop:isMobile?14:24,fontSize:isMobile?12:13,color:T.white,maxWidth:480,lineHeight:1.7}}>
+            {activeUser.first} har spillet <strong>{jobs.length} {jobs.length===1?'job':'jobs'}</strong> i {year} og optjent
+            <strong style={{color:T.green}}> {fmtN(earned)} kr.</strong>
+            {paid!==0&&<> – heraf er <strong style={{color:T.red}}>{fmtN(Math.abs(paid))} kr.</strong> udbetalt.</>}
+          </div>
+        </div>
+        <div style={{
+          background:color,color:'#F8F5E6',
+          padding:isMobile?'22px 24px':isTablet?'26px 26px':'30px 28px',
+          borderRadius:18,display:'flex',flexDirection:'column',justifyContent:'space-between',
+          minHeight:isMobile?'auto':isTablet?220:300,gap:isMobile?18:0,
+        }}>
+          <div>
+            <div style={{fontSize:9,letterSpacing:'0.18em',opacity:0.8,marginBottom:isMobile?6:8}}>
+              NORTH AVENUE BACKSTAGE — {String(year).slice(-2)}
             </div>
-            <div style={{display:"flex",gap:24,marginLeft:"auto",flexWrap:"wrap",alignItems:"center"}}>
-              {[{l:"OPTJENT",v:fmt(earned),c:T.green},{l:"UDBETALT",v:fmt(Math.abs(paid)),c:T.red},{l:"TIL GODE",v:fmt(balance),c:balance>=0?T.green:T.red}].map(s=>(<div key={s.l}>
-                <div style={{fontSize:9,color:T.subText,letterSpacing:"0.12em",fontFamily:"'Poppins',sans-serif",marginBottom:4}}>{s.l}</div>
-                <div style={{fontSize:24,fontWeight:800,color:s.c,fontFamily:"'Poppins',sans-serif",letterSpacing:"-0.02em"}}>{s.v}</div>
-              </div>))}
-              {isAdmin&&<Btn onClick={()=>{setAddTarget(u.musicianId);setShowAdd(true);}} color={T.orange} small style={{alignSelf:"center"}}>+ POST</Btn>}
+            <div style={{fontFamily:serif,fontSize:isMobile?28:isTablet?30:38,fontWeight:600,letterSpacing:'-0.01em',lineHeight:1}}>
+              {activeUser.first}<br/>{activeUser.last}.
+            </div>
+            <div style={{fontFamily:serif,fontStyle:'italic',fontSize:isMobile?14:isTablet?15:18,marginTop:isMobile?8:12,opacity:0.85}}>
+              {activeUser.instrument||'—'}
+            </div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:isMobile?14:isTablet?14:18,marginTop:isMobile?0:isTablet?20:30}}>
+            <div>
+              <div style={{fontSize:9,letterSpacing:'0.16em',opacity:0.7,marginBottom:isMobile?3:4}}>OPTJENT</div>
+              <div style={{fontFamily:serif,fontSize:isMobile?20:isTablet?22:26,fontWeight:600}}>{fmtN(earned)}</div>
+            </div>
+            <div>
+              <div style={{fontSize:9,letterSpacing:'0.16em',opacity:0.7,marginBottom:isMobile?3:4}}>UDBETALT</div>
+              <div style={{fontFamily:serif,fontSize:isMobile?20:isTablet?22:26,fontWeight:600}}>{fmtN(Math.abs(paid))}</div>
             </div>
           </div>
         </div>
-        {isMobile&&(<div style={{display:"flex",gap:6,marginBottom:8}}>
-          <button onClick={()=>setPayTab("jobs")} style={{flex:1,padding:"9px",background:payTab==="jobs"?T.orange:"transparent",border:`1px solid ${payTab==="jobs"?T.orange:T.border}`,borderRadius:8,color:payTab==="jobs"?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700}}>JOBS · {jobs.length}</button>
-          <button onClick={()=>setPayTab("posts")} style={{flex:1,padding:"9px",background:payTab==="posts"?T.orange:"transparent",border:`1px solid ${payTab==="posts"?T.orange:T.border}`,borderRadius:8,color:payTab==="posts"?"#F8F5E6":T.muted,cursor:"pointer",fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:700}}>POSTER · {myPay.length}</button>
-        </div>)}
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
-          {(!isMobile||payTab==="jobs")&&<div>
-            <div style={{fontSize:9,color:T.subText,letterSpacing:"0.12em",marginBottom:8,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>JOBS · {jobs.length}</div>
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {jobs.map(b=>{const mp=calcMusicianPay(b.bandPay);const inSub=b.substituteIds?.includes(u.musicianId)&&!b.memberIds.includes(u.musicianId);const pay=isOwner?OWNER_PAY:inSub?calcSubPay(mp):mp;
-                return(<div key={b.id} style={{background:T.dim,borderRadius:8,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div><div style={{fontSize:12,color:T.cardText,fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{b.type}</div><div style={{fontSize:10,color:T.subText,marginTop:2,fontFamily:"'Poppins',sans-serif"}}>{fmtDateShort(b.date)} · {b.city}</div></div>
-                  <PayBadge amount={pay}/>
-                </div>);
-              })}
-              {jobs.length===0&&<div style={{background:T.dim,borderRadius:8,padding:"16px 14px",textAlign:"center",color:T.muted,fontSize:12,fontFamily:"'Poppins',sans-serif"}}>Ingen afholdte jobs</div>}
-            </div>
-          </div>}
-          {(!isMobile||payTab==="posts")&&<div>
-            <div style={{fontSize:9,color:T.subText,letterSpacing:"0.12em",marginBottom:8,fontFamily:"'Poppins',sans-serif",fontWeight:600}}>POSTER</div>
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {myPay.map(p=>(<div key={p.id} style={{background:T.dim,borderRadius:8,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div><div style={{fontSize:12,color:T.cardText,fontWeight:600,fontFamily:"'Poppins',sans-serif"}}>{p.note}</div><div style={{fontSize:10,color:T.subText,marginTop:2,fontFamily:"'Poppins',sans-serif"}}>{p.date}</div></div>
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <span style={{fontFamily:"'Poppins',sans-serif",fontWeight:700,color:p.amount<0?T.red:T.green,fontSize:12}}>{fmt(p.amount)}</span>
-                  {isAdmin&&<button onClick={()=>setConfirmRemove({mid:u.musicianId,pid:p.id,note:p.note})} style={{background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:15,padding:0}}>×</button>}
-                </div>
-              </div>))}
-              {myPay.length===0&&<div style={{background:T.dim,borderRadius:8,padding:"16px 14px",textAlign:"center",color:T.muted,fontSize:12,fontFamily:"'Poppins',sans-serif"}}>Ingen poster</div>}
-            </div>
-          </div>}
-        </div>
-      </div>);
-    })}
-
-    {showAdd&&(<Modal title="TILFØJ POST" onClose={()=>{setShowAdd(false);setAddTarget(null);}} T={T}>
-      <Field label="BELØB" T={T}><Inp value={na} onChange={e=>setNa(e.target.value)} type="number" placeholder="-1500" T={T}/></Field>
-      <Field label="BESKRIVELSE" T={T}><Inp value={nn} onChange={e=>setNn(e.target.value)} placeholder="Januar leje" T={T}/></Field>
-      <Field label="DATO" T={T}><Inp value={nd} onChange={e=>setNd(e.target.value)} type="date" T={T}/></Field>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:8}}>
-        <Btn onClick={()=>{setShowAdd(false);setAddTarget(null);}} color={T.muted} small>ANNULLER</Btn>
-        <Btn onClick={addPayment} color={T.orange} small>GEM</Btn>
       </div>
-    </Modal>)}
-    {confirmRemove&&<ConfirmModal message={`Vil du fjerne posten "${confirmRemove.note}"?`} onConfirm={()=>removePay(confirmRemove.mid,confirmRemove.pid)} onCancel={()=>setConfirmRemove(null)} T={T}/>}
-  </div>);
+
+      {/* Mobile tab switcher */}
+      {isMobile&&(
+        <div style={{display:'flex',gap:6,marginBottom:14,padding:4,background:T.dim,borderRadius:12}}>
+          {[{id:'jobs',l:`Jobs · ${jobs.length}`},{id:'posts',l:`Poster · ${posts.length}`}].map(t=>(
+            <button key={t.id} onClick={()=>setMobileTab(t.id)} style={{
+              flex:1,padding:'9px',
+              background:mobileTab===t.id?T.orange:'transparent',
+              color:mobileTab===t.id?(isDark?'#1A1718':'#F2EFE4'):T.muted,
+              border:'none',borderRadius:8,fontFamily:sans,fontSize:11,fontWeight:700,letterSpacing:'0.04em',cursor:'pointer',
+            }}>{t.l}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Body: Jobs + Poster */}
+      <div style={{display:isMobile?'block':'grid',gridTemplateColumns:isMobile?undefined:'1.6fr 1fr',gap:isMobile?0:isTablet?32:48}}>
+
+        {/* Afholdte jobs */}
+        {(!isMobile||mobileTab==='jobs')&&(
+          <div>
+            {!isMobile&&(
+              <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:20}}>
+                <div style={{fontFamily:serif,fontSize:isTablet?24:28,fontWeight:600,letterSpacing:'-0.01em'}}>Afholdte jobs</div>
+                <div style={{fontSize:10,letterSpacing:'0.16em',color:T.muted}}>{jobs.length} I ALT</div>
+              </div>
+            )}
+            {jobs.length===0&&(
+              <div style={{fontFamily:serif,fontStyle:'italic',fontSize:isTablet?14:15,color:T.muted,padding:'18px 0'}}>
+                Ingen jobs registreret endnu.
+              </div>
+            )}
+            {Object.keys(monthsByJobs).sort((a,b)=>+a-+b).map(mi=>{
+              const mJobs=monthsByJobs[mi];
+              const isO=activeUser.subType==='owner';
+              const mTotal=mJobs.reduce((s,b)=>{
+                const inSub=b.substituteIds?.includes(activeUser.musicianId)&&!b.memberIds.includes(activeUser.musicianId);
+                return s+(isO?OWNER_PAY:inSub?calcSubPay(calcMusicianPay(b.bandPay)):calcMusicianPay(b.bandPay));
+              },0);
+              return(
+                <div key={mi} style={{marginBottom:isMobile?22:28}}>
+                  <div style={{display:'flex',alignItems:'baseline',gap:14,marginBottom:isMobile?8:10,paddingBottom:isMobile?6:8,borderBottom:`1px solid ${T.white}`}}>
+                    <span style={{fontFamily:serif,fontSize:isMobile?28:isTablet?32:42,fontWeight:600,letterSpacing:'-0.02em',color:T.orange,lineHeight:1}}>
+                      {monthName[+mi]}
+                    </span>
+                    <span style={{marginLeft:'auto',fontFamily:serif,fontSize:isMobile?12:isTablet?13:14,fontStyle:'italic',color:T.muted}}>
+                      {mJobs.length} {mJobs.length===1?'job':'jobs'} · {fmtN(mTotal)} kr.
+                    </span>
+                  </div>
+                  {mJobs.map((b,bi)=>{
+                    const isO2=activeUser.subType==='owner';
+                    const inSub=b.substituteIds?.includes(activeUser.musicianId)&&!b.memberIds.includes(activeUser.musicianId);
+                    const pay=isO2?OWNER_PAY:inSub?calcSubPay(calcMusicianPay(b.bandPay)):calcMusicianPay(b.bandPay);
+                    return(
+                      <div key={b.id} style={{
+                        display:'grid',
+                        gridTemplateColumns:isMobile?'32px 1fr auto':isTablet?'36px 1fr auto':'40px 1fr auto',
+                        gap:isMobile?10:14,padding:isMobile?'10px 0':'12px 0',
+                        borderBottom:bi<mJobs.length-1?`1px solid ${T.border}`:'none',
+                        alignItems:'baseline',
+                      }}>
+                        <div style={{fontFamily:serif,fontSize:isMobile?18:isTablet?20:22,fontWeight:600,color:T.muted,lineHeight:1}}>
+                          {new Date(b.date).getDate()}
+                        </div>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontFamily:serif,fontSize:isMobile?15:isTablet?16:18,fontWeight:600,letterSpacing:'-0.01em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                            {b.type}
+                          </div>
+                          <div style={{fontSize:isMobile?10:11,color:T.muted,marginTop:isMobile?2:3,fontStyle:'italic',fontFamily:serif}}>
+                            {b.city}
+                          </div>
+                        </div>
+                        <div style={{fontFamily:serif,fontSize:isMobile?15:isTablet?16:18,fontWeight:600,color:T.green,whiteSpace:'nowrap'}}>
+                          + {fmtN(pay)} <span style={{fontSize:isMobile?10:11,color:T.muted}}>kr.</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Poster */}
+        {(!isMobile||mobileTab==='posts')&&(
+          <div>
+            <div style={{position:'sticky',top:20}}>
+              <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:isMobile?14:20}}>
+                {!isMobile&&<div style={{fontFamily:serif,fontSize:isTablet?24:28,fontWeight:600,letterSpacing:'-0.01em'}}>Poster</div>}
+                {isMobile&&<div style={{fontSize:10,letterSpacing:'0.16em',color:T.muted}}>{posts.length} POSTER</div>}
+                {role==='admin'&&(
+                  <button onClick={()=>{setAddTarget(activeUser.musicianId);setShowAdd(true);}} style={{
+                    padding:isMobile?'7px 12px':'8px 14px',
+                    background:T.orange,color:isDark?'#1A1718':'#F2EFE4',
+                    border:'none',borderRadius:10,fontSize:10,letterSpacing:'0.1em',
+                    fontWeight:700,cursor:'pointer',fontFamily:sans,
+                  }}>+ TILFØJ</button>
+                )}
+              </div>
+              <div style={{background:paper,padding:isMobile?16:24,borderRadius:14,border:`1px solid ${T.border}`}}>
+                {posts.length===0&&(
+                  <div style={{fontFamily:serif,fontStyle:'italic',fontSize:isMobile?13:14,color:T.muted,padding:'4px 0'}}>
+                    Ingen poster.
+                  </div>
+                )}
+                {posts.map((p,pi)=>(
+                  <div key={p.id} style={{padding:isMobile?'12px 0':'16px 0',borderBottom:pi<posts.length-1?`1px dashed ${T.border}`:'none'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8}}>
+                      <div style={{fontFamily:serif,fontSize:isMobile?15:isTablet?16:18,fontWeight:600,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {p.note}
+                      </div>
+                      <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
+                        <div style={{fontFamily:serif,fontSize:isMobile?16:isTablet?18:20,fontWeight:600,color:p.amount>=0?T.green:T.red,whiteSpace:'nowrap'}}>
+                          {p.amount>=0?'+':''}{fmtN(p.amount)}
+                        </div>
+                        {role==='admin'&&(
+                          <button onClick={()=>setConfirmRemove({mid:activeUser.musicianId,pid:p.id,note:p.note})} style={{background:'none',border:'none',color:T.muted,cursor:'pointer',fontSize:15,padding:0}}>×</button>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{fontSize:10,color:T.muted,marginTop:isMobile?2:3,fontStyle:'italic',fontFamily:serif}}>
+                      {fmtDateShort(p.date)} · {new Date(p.date).getFullYear()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showAdd&&(
+        <Modal title="TILFØJ POST" onClose={()=>{setShowAdd(false);setAddTarget(null);}} T={T}>
+          <Field label="BELØB" T={T}><Inp value={addAmt} onChange={e=>setAddAmt(e.target.value)} type="number" placeholder="-1500" T={T}/></Field>
+          <Field label="BESKRIVELSE" T={T}><Inp value={addNote2} onChange={e=>setAddNote2(e.target.value)} placeholder="Januar leje" T={T}/></Field>
+          <Field label="DATO" T={T}><Inp value={addDate} onChange={e=>setAddDate(e.target.value)} type="date" T={T}/></Field>
+          <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:8}}>
+            <Btn onClick={()=>{setShowAdd(false);setAddTarget(null);}} color={T.muted} small>ANNULLER</Btn>
+            <Btn onClick={addPayment} color={T.orange} small>GEM</Btn>
+          </div>
+        </Modal>
+      )}
+      {confirmRemove&&<ConfirmModal message={`Vil du fjerne posten "${confirmRemove.note}"?`} onConfirm={()=>removePay(confirmRemove.mid,confirmRemove.pid)} onCancel={()=>setConfirmRemove(null)} T={T}/>}
+    </div>
+  );
 }
 
 // ── INFO ───────────────────────────────────────────────────────────────────
@@ -2120,7 +2392,7 @@ export default function App(){
         </div>
         {effectiveView==="bookings"&&<BookingsView currentUser={curU} bookings={bookings} setBookings={handleSetBookings} users={users} T={T} darkMode={darkMode}/>}
         {effectiveView==="alias"   &&<AliasView currentUser={curU} aliasData={aliasData} setAliasData={handleSetAliasData} users={users} T={T} darkMode={darkMode}/>}
-        {effectiveView==="payroll" &&<PayrollView currentUser={curU} bookings={bookings} payments={payments} setPayments={handleSetPayments} users={users} T={T}/>}
+        {effectiveView==="payroll" &&<PayrollView currentUser={curU} bookings={bookings} payments={payments} setPayments={handleSetPayments} users={users} T={T} darkMode={darkMode}/>}
         {effectiveView==="info"    &&<InfoView currentUser={curU} T={T}/>}
         {effectiveView==="admin"   &&<AdminView users={users} setUsers={handleSetUsers} T={T} onReorder={handleReorder} onUserSaved={handleUserSaved}/>}
         {effectiveView==="profile" &&<ProfileView currentUser={curU} users={users} setUsers={handleSetUsers} T={T} darkMode={darkMode} setDarkMode={handleTheme}/>}
