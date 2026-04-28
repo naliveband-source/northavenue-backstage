@@ -25,13 +25,13 @@ export async function POST(req) {
   try {
     const b = await req.json();
     const booking = await sql`
-      INSERT INTO bookings (id, date, departure, arrival, type, city, address, play_time, sets, band_pay, booker, notes, member_ids, substitute_ids)
-      VALUES (${b.id||null}, ${b.date}, ${b.departure||''}, ${b.arrival||''}, ${b.type}, ${b.city}, ${b.address||''}, ${b.playTime||''}, ${b.sets||''}, ${b.bandPay||0}, ${b.booker||''}, ${b.notes||''}, ${JSON.stringify(b.memberIds||[])}, ${JSON.stringify(b.substituteIds||[])})
+      INSERT INTO bookings (id, date, departure, arrival, type, city, address, play_time, sets, band_pay, booker, notes, dresscode, member_ids, substitute_ids)
+      VALUES (${b.id||null}, ${b.date}, ${b.departure||''}, ${b.arrival||''}, ${b.type}, ${b.city}, ${b.address||''}, ${b.playTime||''}, ${b.sets||''}, ${b.bandPay||0}, ${b.booker||''}, ${b.notes||''}, ${b.dresscode||''}, ${JSON.stringify(b.memberIds||[])}, ${JSON.stringify(b.substituteIds||[])})
       ON CONFLICT (id) DO UPDATE SET
         date=EXCLUDED.date, departure=EXCLUDED.departure, arrival=EXCLUDED.arrival,
         type=EXCLUDED.type, city=EXCLUDED.city, address=EXCLUDED.address,
         play_time=EXCLUDED.play_time, sets=EXCLUDED.sets, band_pay=EXCLUDED.band_pay,
-        booker=EXCLUDED.booker, notes=EXCLUDED.notes,
+        booker=EXCLUDED.booker, notes=EXCLUDED.notes, dresscode=EXCLUDED.dresscode,
         member_ids=EXCLUDED.member_ids, substitute_ids=EXCLUDED.substitute_ids
       RETURNING *`;
     return NextResponse.json(booking[0]);

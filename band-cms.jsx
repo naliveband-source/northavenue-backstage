@@ -220,9 +220,11 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
               {isAdmin&&<Fld label="MUSIKER LØN" value={fmt(mp)} color={stubColor} weight={700}/>}
               <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" weight={700}/>
             </div>
-            {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
+            {(booking.notes||booking.dresscode)&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
               <div style={{fontSize:10,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
-              <div style={{fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>
+              {booking.notes&&<div style={{fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
+              {booking.notes&&booking.dresscode&&<div style={{height:1,background:T.border,margin:"8px 0"}}/>}
+              {booking.dresscode&&<div style={{fontSize:14,fontFamily:"'Poppins',sans-serif"}}><span style={{fontWeight:700,color:T.muted}}>Dresscode: </span><span style={{fontWeight:400,color:T.muted}}>{booking.dresscode}</span></div>}
             </div>}
             <MusicianChips/>
           </div>
@@ -258,7 +260,12 @@ function JobDetailPopup({booking,users,isSub,isAdmin,T,onClose}){
             {isAdmin&&<Fld label="MUSIKER LØN" value={fmt(mp)} color={stubColor} weight={700}/>}
             <Fld label="BOOKER" value={booking.booker} color="#8B3FA8" weight={700} span={2}/>
           </div>
-          {booking.notes&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4,fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
+          {(booking.notes||booking.dresscode)&&<div style={{marginBottom:14,padding:"8px 10px",background:T.black,borderLeft:`3px solid ${stubColor}`,borderRadius:4}}>
+            <div style={{fontSize:10,color:T.subText,letterSpacing:"0.1em",fontWeight:700,fontFamily:"'Poppins',sans-serif",marginBottom:3}}>NOTE</div>
+            {booking.notes&&<div style={{fontSize:14,color:T.muted,fontFamily:"'Poppins',sans-serif"}}>{booking.notes}</div>}
+            {booking.notes&&booking.dresscode&&<div style={{height:1,background:T.border,margin:"8px 0"}}/>}
+            {booking.dresscode&&<div style={{fontSize:14,fontFamily:"'Poppins',sans-serif"}}><span style={{fontWeight:700,color:T.muted}}>Dresscode: </span><span style={{fontWeight:400,color:T.muted}}>{booking.dresscode}</span></div>}
+          </div>}
           <MusicianChips/>
         </div>
       </div>
@@ -566,10 +573,17 @@ function BookingEditModal({booking,users,onSave,onDelete,onClose,T}){
         </div>);
       })}
     </div>);
-    if(section==="note") return(<UlField label="NOTE" T={T}>
-      <textarea value={form.notes||""} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}
-        style={{width:"100%",background:"transparent",border:"none",borderBottom:`1px solid ${T.border}`,outline:"none",color:T.white,fontSize:14,fontFamily:"'Poppins',sans-serif",padding:"6px 0",boxSizing:"border-box",resize:"vertical",minHeight:120,display:"block"}}/>
-    </UlField>);
+    if(section==="note") return(
+      <div>
+        <UlField label="NOTE" T={T}>
+          <textarea value={form.notes||""} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}
+            style={{width:"100%",background:"transparent",border:"none",borderBottom:`1px solid ${T.border}`,outline:"none",color:T.white,fontSize:14,fontFamily:"'Poppins',sans-serif",padding:"6px 0",boxSizing:"border-box",resize:"vertical",minHeight:120,display:"block"}}/>
+        </UlField>
+        <UlField label="DRESSCODE" T={T}>
+          <UlInp value={form.dresscode||""} onChange={e=>setForm(p=>({...p,dresscode:e.target.value}))} placeholder="fx Smart casual, Sort slips..." T={T}/>
+        </UlField>
+      </div>
+    );
     return(<div style={{color:T.border,fontFamily:"'Poppins',sans-serif",fontSize:12,padding:"20px 0"}}>Ingen ændringer endnu.</div>);
   };
 
