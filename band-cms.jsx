@@ -925,6 +925,12 @@ function BookingsView({currentUser,bookings,setBookings,users,T,darkMode}){
                     MELD FRAVÆRENDE
                   </button>
                 )}
+                {!isAdmin&&!past&&!b.memberIds.includes(currentUser.musicianId)&&currentUser.musicianId&&(
+                  <button onClick={e=>{e.stopPropagation();toggleMember(b.id,currentUser.musicianId);}}
+                    style={{padding:"4px 10px",border:`1px solid ${T.green}`,background:T.green+"18",color:T.green,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
+                    MELD MIG PÅ
+                  </button>
+                )}
                 {isAdmin&&(
                   <button onClick={e=>{e.stopPropagation();setEditingBooking(b);}}
                     style={{padding:"4px 10px",border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:9,fontWeight:700,fontFamily:"'Poppins',sans-serif",borderRadius:6}}>
