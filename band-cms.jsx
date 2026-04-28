@@ -1371,7 +1371,7 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T,darkMode
                 {role==='admin'&&(
                   <button onClick={()=>{setAddTarget(activeUser.musicianId);setShowAdd(true);}} style={{
                     padding:isMobile?'7px 12px':'8px 14px',
-                    background:color,color:isDark?'#1A1718':'#F2EFE4',
+                    background:color,color:'#F8F5E6',
                     border:'none',borderRadius:10,fontSize:10,letterSpacing:'0.1em',
                     fontWeight:700,cursor:'pointer',fontFamily:sans,
                   }}>+ TILFØJ</button>
