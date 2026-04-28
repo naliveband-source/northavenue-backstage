@@ -1319,7 +1319,7 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T,darkMode
               return(
                 <div key={mi} style={{marginBottom:isMobile?22:28}}>
                   <div style={{display:'flex',alignItems:'baseline',gap:14,marginBottom:isMobile?8:10,paddingBottom:isMobile?6:8,borderBottom:`1px solid ${T.white}`}}>
-                    <span style={{fontFamily:serif,fontSize:isMobile?28:isTablet?32:42,fontWeight:600,letterSpacing:'-0.02em',color:T.orange,lineHeight:1}}>
+                    <span style={{fontFamily:serif,fontSize:isMobile?28:isTablet?32:42,fontWeight:600,letterSpacing:'-0.02em',color:color,lineHeight:1}}>
                       {monthName[+mi]}
                     </span>
                     <span style={{marginLeft:'auto',fontFamily:serif,fontSize:isMobile?12:isTablet?13:14,fontStyle:'italic',color:T.muted}}>
@@ -1371,7 +1371,7 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T,darkMode
                 {role==='admin'&&(
                   <button onClick={()=>{setAddTarget(activeUser.musicianId);setShowAdd(true);}} style={{
                     padding:isMobile?'7px 12px':'8px 14px',
-                    background:T.orange,color:isDark?'#1A1718':'#F2EFE4',
+                    background:color,color:isDark?'#1A1718':'#F2EFE4',
                     border:'none',borderRadius:10,fontSize:10,letterSpacing:'0.1em',
                     fontWeight:700,cursor:'pointer',fontFamily:sans,
                   }}>+ TILFØJ</button>
