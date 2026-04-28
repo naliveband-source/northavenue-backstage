@@ -2347,9 +2347,17 @@ export default function App(){
           {n.label}
         </button>))}
       </nav>
-      <div style={{padding:16,borderTop:`1px solid ${T.border}`}}>
-        <div style={{fontSize:13,fontWeight:700,color:T.white,marginBottom:8}}>{curU.first} · {isAdmin?"ADMIN":isSub?"VIKAR":"MUSIKER"}</div>
-        <button onClick={()=>signOut({callbackUrl:"/login"})} style={{width:"100%",padding:"10px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer",fontSize:11,letterSpacing:"0.06em"}}>LOG UD</button>
+      <div style={{borderTop:`1px solid ${T.border}`,padding:16}}>
+        <div style={{border:`1px solid ${T.border}`,borderRadius:12,padding:"14px 16px",marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:40,height:40,background:userColor(curU),borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#F8F5E6",fontFamily:"'Poppins',sans-serif",flexShrink:0}}>{curU.initials||"?"}</div>
+            <div>
+              <div style={{fontSize:14,fontWeight:700,color:T.white,fontFamily:"'Poppins',sans-serif"}}>{curU.first}</div>
+              <div style={{fontSize:9,fontWeight:600,color:T.muted,fontFamily:"'Poppins',sans-serif",letterSpacing:"0.18em"}}>{isAdmin?"ADMIN":isSub?"VIKAR":isAliasOnly?"ALIAS":"MUSIKER"}</div>
+            </div>
+          </div>
+        </div>
+        <button onClick={()=>signOut({callbackUrl:"/login"})} style={{width:"100%",padding:"10px",background:"transparent",border:"none",color:T.muted,cursor:"pointer",fontSize:10,letterSpacing:"0.2em",fontFamily:"'Poppins',sans-serif",fontWeight:600}}>LOG UD</button>
       </div>
     </div>)}
 
