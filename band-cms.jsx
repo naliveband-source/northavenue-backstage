@@ -1284,8 +1284,8 @@ function PayrollView({currentUser,bookings,payments,setPayments,users,T,darkMode
           {[{id:'jobs',l:`Jobs · ${jobs.length}`},{id:'posts',l:`Poster · ${posts.length}`}].map(t=>(
             <button key={t.id} onClick={()=>setMobileTab(t.id)} style={{
               flex:1,padding:'9px',
-              background:mobileTab===t.id?T.orange:'transparent',
-              color:mobileTab===t.id?(isDark?'#1A1718':'#F2EFE4'):T.muted,
+              background:mobileTab===t.id?color:'transparent',
+              color:mobileTab===t.id?'#F8F5E6':T.muted,
               border:'none',borderRadius:8,fontFamily:sans,fontSize:11,fontWeight:700,letterSpacing:'0.04em',cursor:'pointer',
             }}>{t.l}</button>
           ))}
