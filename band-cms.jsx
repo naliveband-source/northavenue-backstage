@@ -1962,6 +1962,18 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
   const [hoverDel,setHoverDel]=useState(false);
   const [currentFilter,setCurrentFilter]=useState(u.calendar_filter||'own');
   const calendarToken=u.calendar_token||'';
+  const [googleCopied,setGoogleCopied]=useState(false);
+  const addToGoogle=async()=>{
+    const url=`${window.location.origin}/api/calendar/${calendarToken}`;
+    try{
+      await navigator.clipboard.writeText(url);
+      setGoogleCopied(true);
+      setTimeout(()=>setGoogleCopied(false),3000);
+    }catch(e){
+      console.error('Clipboard failed:',e);
+    }
+    window.open('https://calendar.google.com/calendar/u/0/r/settings/addbyurl','_blank');
+  };
   const updateFilter=async(newFilter)=>{
     const oldFilter=currentFilter;
     setCurrentFilter(newFilter);
@@ -2122,25 +2134,27 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
             </div>
             <div style={{fontSize:16,color:T.muted}}>→</div>
           </a>
-          <a href={`https://www.google.com/calendar/render?cid=${encodeURIComponent(`https://${typeof window!=='undefined'?window.location.host:''}/api/calendar/${calendarToken}`)}`}
-            target="_blank" rel="noopener noreferrer"
-            style={{flex:1,background:T.black,border:`1px solid ${T.border}`,borderRadius:10,padding:14,display:"flex",alignItems:"center",gap:12,cursor:"pointer",textDecoration:"none",transition:"border-color .15s"}}
-            onMouseEnter={e=>e.currentTarget.style.borderColor=T.orange}
-            onMouseLeave={e=>e.currentTarget.style.borderColor=T.border}>
-            <div style={{width:38,height:38,borderRadius:9,background:T.dim,display:"grid",placeItems:"center",flexShrink:0}}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.white} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-                <text x="12" y="18" textAnchor="middle" fontSize="7" fontWeight="700" fill={T.white} stroke="none" fontFamily="sans-serif">31</text>
-              </svg>
-            </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:12,fontWeight:700,color:T.white,lineHeight:1.1,fontFamily:"'Poppins',sans-serif"}}>Google</div>
-            </div>
-            <div style={{fontSize:16,color:T.muted}}>→</div>
-          </a>
+          <div style={{flex:1,display:"flex",flexDirection:"column"}}>
+            <button onClick={addToGoogle}
+              style={{width:"100%",background:T.black,border:`1px solid ${T.border}`,borderRadius:10,padding:14,display:"flex",alignItems:"center",gap:12,cursor:"pointer",transition:"border-color .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=T.orange}
+              onMouseLeave={e=>e.currentTarget.style.borderColor=T.border}>
+              <div style={{width:38,height:38,borderRadius:9,background:T.dim,display:"grid",placeItems:"center",flexShrink:0}}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.white} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                  <text x="12" y="18" textAnchor="middle" fontSize="7" fontWeight="700" fill={T.white} stroke="none" fontFamily="sans-serif">31</text>
+                </svg>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.white,lineHeight:1.1,fontFamily:"'Poppins',sans-serif"}}>Google</div>
+              </div>
+              <div style={{fontSize:16,color:T.muted}}>→</div>
+            </button>
+            {googleCopied&&<div style={{fontSize:10,color:T.green,fontFamily:"'Poppins',sans-serif",marginTop:6}}>URL kopieret ✓ — indsæt i feltet</div>}
+          </div>
         </div>
       </div>
 

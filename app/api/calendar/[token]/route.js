@@ -79,7 +79,7 @@ function nowUTC() {
 function buildVEVENT(b, prefix = '') {
   const { startDT, endDT } = buildEventTimes(b.date, b.play_time, b.arrival);
   console.log('[ical] processing booking:', b.id, b.date, b.type, b.city);
-  console.log('[ical] parsed time:', b.play_time, '/', b.arrival, '→', startDT, endDT);
+  console.log('[ical] event:', b.id, 'start:', startDT, 'end:', endDT);
   const descParts = [
     `Ankomst ${b.arrival || '—'}`,
     `Spilletid ${b.play_time || '—'}`,
