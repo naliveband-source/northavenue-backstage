@@ -1960,6 +1960,21 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
   const [pwMsg,setPwMsg]=useState(null);
   const [deleteConfirm,setDeleteConfirm]=useState(false);
   const [hoverDel,setHoverDel]=useState(false);
+  const [currentFilter,setCurrentFilter]=useState(u.calendar_filter||'own');
+  const calendarToken=u.calendar_token||'';
+  const updateFilter=async(newFilter)=>{
+    const oldFilter=currentFilter;
+    setCurrentFilter(newFilter);
+    try{
+      const res=await fetch('/api/users',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:currentUser.id,calendar_filter:newFilter})});
+      if(!res.ok)throw new Error('Update failed');
+      setUsers(prev=>prev.map(x=>x.id===currentUser.id?{...x,calendar_filter:newFilter}:x));
+    }catch(err){
+      console.error('[calendar-filter] failed:',err);
+      setCurrentFilter(oldFilter);
+      alert('Kunne ikke opdatere filter. Prøv igen.');
+    }
+  };
   const winW=useWindowWidth();
   const size=winW>=1024?"desktop":winW>=640?"tablet":"mobile";
 
@@ -2024,7 +2039,7 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
 
       {/* CARD 2 — PROFILOPLYSNINGER */}
       <div style={cardStyle}>
-        {secLabel("PROFILOPLYSNINGER","1 / 4")}
+        {secLabel("PROFILOPLYSNINGER","1 / 5")}
         <div style={{display:"grid",gridTemplateColumns:size==="mobile"?"1fr":"1fr 1fr",gap:12}}>
           <Field label="FORNAVN" T={T}><Inp value={form.first} onChange={e=>setForm(p=>({...p,first:e.target.value}))} T={T}/></Field>
           <Field label="EFTERNAVN" T={T}><Inp value={form.last} onChange={e=>setForm(p=>({...p,last:e.target.value}))} T={T}/></Field>
@@ -2043,7 +2058,7 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
 
       {/* CARD 3 — SKIFT ADGANGSKODE */}
       <div style={cardStyle}>
-        {secLabel("SKIFT ADGANGSKODE","2 / 4")}
+        {secLabel("SKIFT ADGANGSKODE","2 / 5")}
         <Field label="NUVÆRENDE ADGANGSKODE" T={T}><PwInput value={pw.old} onChange={e=>setPw(p=>({...p,old:e.target.value}))} T={T}/></Field>
         {pwMsg?.err&&pwMsg.field==="old"&&<div style={{fontSize:11,color:T.red,fontFamily:"'Poppins',sans-serif",marginTop:-10,marginBottom:12}}>{pwMsg.text}</div>}
         <div style={{display:"grid",gridTemplateColumns:size==="mobile"?"1fr":"1fr 1fr",gap:12}}>
@@ -2061,9 +2076,77 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
         <Btn onClick={savePw} color={T.orange} small style={size==="mobile"?{width:"100%"}:{}}>Gem adgangskode →</Btn>
       </div>
 
-      {/* CARD 4 — TEMA */}
+      {/* CARD 4 — KALENDER-SYNK */}
+      <div style={{...cardStyle,gridColumn:size==="desktop"?"1 / -1":"auto"}}>
+        {secLabel("KALENDER-SYNK","3 / 5")}
+        <div style={{fontSize:12,color:T.muted,fontFamily:"'Poppins',sans-serif",lineHeight:1.6,marginBottom:18}}>
+          Synkroniser dine jobs med din kalender-app. Opdateringer hentes automatisk i baggrunden.
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:size==="mobile"?"1fr":"1fr 1fr",gap:10,marginBottom:14}}>
+          {[
+            {id:"own",title:"Mine jobs",sub:"Kun dem du er meldt på"},
+            {id:"all",title:"Alle jobs",sub:"Hele bandets kalender"}
+          ].map(opt=>{
+            const active=currentFilter===opt.id;
+            return(
+              <button key={opt.id} onClick={()=>updateFilter(opt.id)}
+                style={{background:active?`color-mix(in oklab, ${T.orange} 8%, transparent)`:T.black,border:`1px solid ${active?T.orange:T.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",display:"flex",flexDirection:"column",justifyContent:"space-between",minHeight:90,textAlign:"left",fontFamily:"'Poppins',sans-serif",transition:"all .15s"}}>
+                <div>
+                  <div style={{fontSize:9,color:active?T.orange:T.muted,letterSpacing:"0.16em",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>FILTER</div>
+                  <div style={{fontFamily:"'Trirong',serif",fontSize:16,fontWeight:600,color:T.white,lineHeight:1.2}}>{opt.title}</div>
+                </div>
+                <div style={{fontSize:9,color:T.muted,marginTop:4}}>{opt.sub}</div>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{position:"relative",margin:"18px 0 14px",height:1}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:T.border}}/>
+          <div style={{position:"absolute",top:-7,left:"50%",transform:"translateX(-50%)",padding:"0 12px",background:T.dim,fontSize:9,color:T.muted,letterSpacing:"0.18em",fontWeight:700,textTransform:"uppercase",fontFamily:"'Poppins',sans-serif"}}>FØJ TIL</div>
+        </div>
+        <div style={{display:"flex",flexDirection:size==="mobile"?"column":"row",gap:10}}>
+          <a href={`webcal://${typeof window!=='undefined'?window.location.host:''}/api/calendar/${calendarToken}`}
+            style={{flex:1,background:T.black,border:`1px solid ${T.border}`,borderRadius:10,padding:14,display:"flex",alignItems:"center",gap:12,cursor:"pointer",textDecoration:"none",transition:"border-color .15s"}}
+            onMouseEnter={e=>e.currentTarget.style.borderColor=T.orange}
+            onMouseLeave={e=>e.currentTarget.style.borderColor=T.border}>
+            <div style={{width:38,height:38,borderRadius:9,background:T.dim,display:"grid",placeItems:"center",flexShrink:0}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.white} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.white,lineHeight:1.1,fontFamily:"'Poppins',sans-serif"}}>Apple</div>
+            </div>
+            <div style={{fontSize:16,color:T.muted}}>→</div>
+          </a>
+          <a href={`https://www.google.com/calendar/render?cid=${encodeURIComponent(`https://${typeof window!=='undefined'?window.location.host:''}/api/calendar/${calendarToken}`)}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{flex:1,background:T.black,border:`1px solid ${T.border}`,borderRadius:10,padding:14,display:"flex",alignItems:"center",gap:12,cursor:"pointer",textDecoration:"none",transition:"border-color .15s"}}
+            onMouseEnter={e=>e.currentTarget.style.borderColor=T.orange}
+            onMouseLeave={e=>e.currentTarget.style.borderColor=T.border}>
+            <div style={{width:38,height:38,borderRadius:9,background:T.dim,display:"grid",placeItems:"center",flexShrink:0}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.white} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+                <text x="12" y="18" textAnchor="middle" fontSize="7" fontWeight="700" fill={T.white} stroke="none" fontFamily="sans-serif">31</text>
+              </svg>
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.white,lineHeight:1.1,fontFamily:"'Poppins',sans-serif"}}>Google</div>
+            </div>
+            <div style={{fontSize:16,color:T.muted}}>→</div>
+          </a>
+        </div>
+      </div>
+
+      {/* CARD 5 — TEMA */}
       <div style={cardStyle}>
-        {secLabel("TEMA","3 / 4")}
+        {secLabel("TEMA","4 / 5")}
         <div style={{display:"flex",gap:10}}>
           {[
             {id:true, icon:"☾", label:"Mørkt", bg:"#181719", fg:"#F8F5E6", accent:"#D4622A"},
@@ -2088,9 +2171,9 @@ function ProfileView({currentUser,users,setUsers,T,darkMode,setDarkMode}){
         </div>
       </div>
 
-      {/* CARD 5 — FAREOMRÅDE */}
+      {/* CARD 6 — FAREOMRÅDE */}
       <div style={{...cardStyle,border:`1px solid color-mix(in oklab, ${T.red} 40%, ${T.border})`}}>
-        {secLabel("FAREOMRÅDE","4 / 4",T.red)}
+        {secLabel("FAREOMRÅDE","5 / 5",T.red)}
         <div style={{fontSize:12,color:T.muted,fontFamily:"'Poppins',sans-serif",lineHeight:1.6,marginBottom:14}}>
           Din profil arkiveres permanent. Du kan ikke fortryde dette selv. Kontakt en anden admin hvis du har brug for hjælp.
         </div>

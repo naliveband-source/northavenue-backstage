@@ -2,6 +2,7 @@ import { sql } from "../../../lib/db";
 import { NextResponse } from "next/server";
 import { auth } from "../../auth";
 import { syncEnrollment } from "../../../lib/booking-enrollment";
+import { randomUUID } from "crypto";
 
 export async function GET() {
   const session = await auth();
@@ -45,9 +46,10 @@ export async function POST(req) {
       }
     }
 
+    const calendarToken = randomUUID();
     const user = await sql`
-      INSERT INTO users (id, email, password, first, last, initials, instrument, phone, role, sub_type, is_admin, tags, theme, musician_id, color, status)
-      VALUES (${b.id}, ${email}, ${password}, ${b.first}, ${b.last}, ${b.initials}, ${b.instrument}, ${b.phone}, ${b.role}, ${b.subType}, ${b.isAdmin}, ${JSON.stringify(tags)}, ${b.theme||'dark'}, ${musicianId}, ${b.color||''}, ${b.status||'pending'})
+      INSERT INTO users (id, email, password, first, last, initials, instrument, phone, role, sub_type, is_admin, tags, theme, musician_id, color, status, calendar_token, calendar_filter)
+      VALUES (${b.id}, ${email}, ${password}, ${b.first}, ${b.last}, ${b.initials}, ${b.instrument}, ${b.phone}, ${b.role}, ${b.subType}, ${b.isAdmin}, ${JSON.stringify(tags)}, ${b.theme||'dark'}, ${musicianId}, ${b.color||''}, ${b.status||'pending'}, ${calendarToken}, 'own')
       ON CONFLICT (id) DO UPDATE SET
         email=EXCLUDED.email,
         password=COALESCE(NULLIF(EXCLUDED.password, ''), users.password),
@@ -80,10 +82,23 @@ export async function POST(req) {
 
 export async function PATCH(req) {
   const session = await auth();
-  if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const b = await req.json();
     if (!b.id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+    // Self-service: any authenticated user can update only their own calendar_filter
+    const bodyKeys = Object.keys(b);
+    if (b.calendar_filter !== undefined && bodyKeys.every(k => k === 'id' || k === 'calendar_filter')) {
+      if (session.user.id !== b.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (b.calendar_filter !== 'own' && b.calendar_filter !== 'all') {
+        return NextResponse.json({ error: "Invalid filter value" }, { status: 400 });
+      }
+      const user = await sql`UPDATE users SET calendar_filter = ${b.calendar_filter} WHERE id = ${b.id} RETURNING *`;
+      return NextResponse.json(user[0]);
+    }
+
+    if (!session?.user?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     let tags = Array.isArray(b.tags) ? b.tags : [];
     if (tags.includes('musiker') && tags.includes('vikar')) {
