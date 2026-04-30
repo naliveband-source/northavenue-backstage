@@ -12,13 +12,20 @@ function icsEscape(str) {
     .replace(/\r/g, '');
 }
 
+// Normalize HH.MM → HH:MM so both period and colon separators are handled
+function normalizeTime(s) {
+  return (s || '').replace(/(\d{1,2})\.(\d{2})/g, '$1:$2');
+}
+
 function parseTimeStart(playTime, arrival) {
-  if (playTime) {
-    const m = playTime.match(/(\d{1,2}):(\d{2})/);
+  const pt = normalizeTime(playTime);
+  const ar = normalizeTime(arrival);
+  if (pt) {
+    const m = pt.match(/(\d{1,2}):(\d{2})/);
     if (m) return { h: parseInt(m[1]), m: parseInt(m[2]) };
   }
-  if (arrival) {
-    const m = arrival.match(/(\d{1,2}):(\d{2})/);
+  if (ar) {
+    const m = ar.match(/(\d{1,2}):(\d{2})/);
     if (m) return { h: parseInt(m[1]), m: parseInt(m[2]) };
   }
   return { h: 20, m: 0 };
@@ -26,8 +33,9 @@ function parseTimeStart(playTime, arrival) {
 
 function parseTimeEnd(playTime) {
   if (!playTime) return null;
-  // Match the end time after an en-dash or hyphen: "21:00–01:00" or "21:00-01:00"
-  const m = playTime.match(/\d{1,2}:\d{2}[–\-](\d{1,2}):(\d{2})/);
+  const pt = normalizeTime(playTime);
+  // Accept hyphen (-), en-dash (–), em-dash (—) with optional surrounding spaces
+  const m = pt.match(/\d{1,2}:\d{2}\s*[-–—]\s*(\d{1,2}):(\d{2})/);
   if (!m) return null;
   return { h: parseInt(m[1]), m: parseInt(m[2]) };
 }
@@ -70,6 +78,8 @@ function nowUTC() {
 
 function buildVEVENT(b, prefix = '') {
   const { startDT, endDT } = buildEventTimes(b.date, b.play_time, b.arrival);
+  console.log('[ical] processing booking:', b.id, b.date, b.type, b.city);
+  console.log('[ical] parsed time:', b.play_time, '/', b.arrival, '→', startDT, endDT);
   const descParts = [
     `Ankomst ${b.arrival || '—'}`,
     `Spilletid ${b.play_time || '—'}`,
@@ -106,7 +116,8 @@ export async function GET(request, { params }) {
     }
 
     const filter = user.calendar_filter || 'own';
-    const musicianId = user.musician_id;
+    // Coerce to Number to guard against DB driver returning integer as string
+    const musicianId = user.musician_id != null ? Number(user.musician_id) : null;
     const userTags = JSON.parse(user.tags || '[]');
     const isAliasManager = userTags.includes('alias_manager');
 
@@ -116,9 +127,14 @@ export async function GET(request, { params }) {
     } else if (musicianId != null) {
       const rows = await sql`SELECT * FROM bookings WHERE (archived = false OR archived IS NULL) ORDER BY date`;
       bookings = rows.filter(b => {
-        const memberIds = JSON.parse(b.member_ids || '[]');
-        const substituteIds = JSON.parse(b.substitute_ids || '[]');
-        return memberIds.includes(musicianId) || substituteIds.includes(musicianId);
+        try {
+          const memberIds = JSON.parse(b.member_ids || '[]').map(Number);
+          const substituteIds = JSON.parse(b.substitute_ids || '[]').map(Number);
+          return memberIds.includes(musicianId) || substituteIds.includes(musicianId);
+        } catch {
+          console.warn('[ical] failed to parse member_ids for booking', b.id);
+          return false;
+        }
       });
     }
 
@@ -129,6 +145,8 @@ export async function GET(request, { params }) {
         WHERE (archived = false OR archived IS NULL) AND manager_user_id = ${user.id}
         ORDER BY date`;
     }
+
+    console.log('[ical] generated', bookings.length + aliasBookings.length, 'VEVENTs');
 
     const parts = [
       'BEGIN:VCALENDAR',
